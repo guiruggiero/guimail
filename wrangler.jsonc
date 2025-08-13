@@ -1,0 +1,33 @@
+{
+	// "$schema": "node_modules/wrangler/config-schema.json",
+	"name": "guimail",
+	"main": "src/index.js",
+	"compatibility_date": "2025-08-13",
+	"compatibility_flags": [
+    	"nodejs_compat"
+  	],
+	"observability": {
+		"enabled": true
+	}
+
+	// "send_email": [{
+	// 	"name": "ANALYTICS_EMAIL",
+	// 	"destination_address": "<>"
+	// }],
+	// "triggers": {
+	// 	"crons": [
+	// 	"0 10 * * *"
+	// ]}
+	
+	// "vars": {
+	// 	"EMAIL_GUI": "",
+	// 	"EMAIL_GUIMAIL": ""
+	// }
+
+	/**
+	 * Bindings
+	 * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
+	 * databases, object storage, AI inference, real-time communication and more.
+	 * https://developers.cloudflare.com/workers/runtime-apis/bindings/
+	 */
+}
