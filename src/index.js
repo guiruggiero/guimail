@@ -7,23 +7,16 @@ export default {
         // List of allowed senders
         const allowedSenders = [
             env.EMAIL_GUI,
+            env.EMAIL_UM,
+            // env.EMAIL_GEORGIA,
         ];
-
-        // message parameters: from, to, headers, raw, rawSize
-        // message methods: setReject, await forward, await reply
 
         console.log(message.headers.get("Subject"));
 
-        // Sender not allowed
-        if (!allowedSenders.includes(message.from)) {
-            // TODO: log details somewhere - Sentry logs?
-            
-            message.setReject("Address not allowed");
-            return;
-        }
-        
         // Sender allowed
-        else {
+        if (allowedSenders.includes(message.from)) {
+            // message.setReject("Sender allowed");
+
             // TODO: send for processing using function
 
             // await message.reply(
@@ -39,10 +32,10 @@ export default {
                 msg.setHeader("In-Reply-To", message.headers.get("Message-ID"));
                 msg.setSender({name: "GuiMail", addr: env.EMAIL_GUIMAIL});
                 msg.setRecipient(message.from);
-                msg.setSubject("Auto-reply"); // TODO: how does it work with reply-to?
+                msg.setSubject("Auto-reply"); // TODO: how to make it be a thread reply?
                 msg.addMessage({
                     contentType: "text/plain",
-                    data: "Email received",
+                    data: "Test complete - email received",
                 });
 
                 const replyMessage = new EmailMessage(
@@ -52,13 +45,18 @@ export default {
                 );
 
                 await message.reply(replyMessage);
-                return;
 
             } catch (error) { // TODO: Sentry
                 console.error(error);
-                message.setReject("Failed to process email reply.");
-                return;
+                message.setReject("Failed to process email");
             }
+        }
+        
+        // Sender not allowed
+        else {
+            message.setReject("Sender not allowed");
+
+            // TODO: log details somewhere - Sentry logs?
         }
     },
 };

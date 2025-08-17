@@ -13,11 +13,12 @@
 		"@stylistic/eslint-plugin-js": "^4.4.1",
 		"eslint": "^9.33.0",
 		"globals": "^16.3.0",
-		"wrangler": "^4.29.1"
+		"wrangler": "^4.30.0"
 	},
 	"scripts": {
 		"deploy": "npx wrangler deploy",
 		"update": "npm i -D wrangler@latest",
-		"key": "npx wrangler secret put/delete <KEY>"
+		"key": "npx wrangler secret put/delete <KEY>",
+		"login": "export CLOUDFLARE_API_TOKEN=<> && npx wrangler whoami"
 	}
 }
