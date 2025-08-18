@@ -1,10 +1,42 @@
 // Imports
-import PostalMime from "postal-mime";
-import {createMimeMessage} from "mimetext";
+import axios from "axios";
 import {EmailMessage} from "cloudflare:email";
 
-// Initialization
+// Initializations
+const cloudFunctionURL = "https://guimail.guiruggiero.com/";
 const MAX_EMAIL_SIZE = 5 * 1024 * 1024; // 5MB
+
+// Axios instance with retry configuration
+const axiosInstance = axios.create({
+    baseURL: cloudFunctionURL,
+    timeout: 4000, // 4s
+    retry: 2, // Number of retry attempts
+    retryDelay: (retryCount) => {
+        return retryCount * 1000; // 1s, then 2s between retries
+    },
+});
+
+// Interceptor to handle retries
+axiosInstance.interceptors.response.use(null, async (error) => {
+    const config = error.config;
+    
+    // Only retry on network errors or 5xx responses
+    if (!config || !config.retry || (error.response && error.response.status < 500 && error.response.status >= 0)) {
+        return Promise.reject(error);
+    }
+    
+    config.retryCount = config.retryCount || 0;
+    
+    if (config.retryCount >= config.retry) {
+        return Promise.reject(error);
+    }
+    
+    config.retryCount++;
+    const delay = config.retryDelay(config.retryCount);
+    
+    await new Promise(resolve => setTimeout(resolve, delay));
+    return axiosInstance(config);
+});
 
 export default {
     // eslint-disable-next-line no-unused-vars
@@ -12,7 +44,7 @@ export default {
         // List of allowed senders
         const allowedSenders = [
             env.EMAIL_GUI,
-            env.EMAIL_UM,
+            // env.EMAIL_UM,
             // env.EMAIL_GEORGIA,
         ].filter(Boolean).map(sender => sender.toLowerCase()); // Forced lowercase
 
@@ -34,70 +66,37 @@ export default {
             return;
         }
 
-        // --- TODO: implement in GuiMail
-        // parameters: message.headers, message.raw, message.from
-        // return: success/fail boolean; msg for true, text for false
+        // Call GuiMail
+        const response = await axiosInstance.post("", null, {params: {
+            from: message.from,
+            headers: message.headers,
+            raw: message.raw,
+        }}).catch(error => { // Error calling GuiMail
+            console.error(error); // TODO: Sentry
+            message.setReject("Failed to call GuiMail");
+        });
+        const msg = response.data.msg;
 
-        // Extract body from message
-        let messageBody = "";
-        try {
-            const parser = new PostalMime();
-            const body = await parser.parse(message.raw);
+        // GuiMail call successful
+        if (response.data.success == true) {
+            try {
+                // Construct reply object
+                const replyMessage = new EmailMessage(
+                    env.EMAIL_GUIMAIL,
+                    message.from,
+                    msg.asRaw(),
+                );
 
-            // Return text body if it exists, otherwise the HTML body
-            messageBody = body.text || body.html;
-            if (!messageBody) throw new Error("Message has no text or HTML body");
+                await message.reply(replyMessage);
 
-        } catch (error) { // TODO: Sentry
-            console.log(error);
-            message.setReject("Failed to extract message body");
-        }
-
-        // TODO: call Gemini
-
-        // Confirm event creation
-        try {
-            // Get relevant content from message
-            const originalSubject = message.headers.get("Subject") || "";
-            const messageId = message.headers.get("Message-ID");
-
-            // Initialize message object
-            const msg = createMimeMessage();
-
-            // Set fields for threading
-            const newSubject = originalSubject.trim().toLowerCase().startsWith("re:") ? originalSubject : `Re: ${originalSubject}`; // Add "Re:" prefix if not already present
-            msg.setSubject(newSubject);
-            msg.setHeader("In-Reply-To", messageId);
-            const newReferences = [message.headers.get("References"), messageId].filter(Boolean).join(" ");
-            msg.setHeader("References", newReferences);
-
-            // Set content for email body
-            msg.addMessage({
-                contentType: "text/plain",
-                // data: `Event created: ${eventLink}`, // TODO: return from GuiMail function
-                data: `Information extracted: ${messageBody}`,
-            });
-
-            // Set remaining fields
-            msg.setSender({name: "GuiMail", addr: env.EMAIL_GUIMAIL});
-            msg.setRecipient(message.from);
-
-
-            // ---
-
-
-            // Construct reply object
-            const replyMessage = new EmailMessage(
-                env.EMAIL_GUIMAIL,
-                message.from,
-                msg.asRaw(),
-            );
-
-            await message.reply(replyMessage);
-
-        } catch (error) { // TODO: Sentry
-            console.log(error);
-            message.setReject("Failed to respond");
+            } catch (error) {
+                console.error(error); // TODO: Sentry
+                message.setReject("Failed to respond");
+            }
+        
+        // Error during GuiMail call
+        } else { // TODO: Sentry inside function?
+            message.setReject(msg);
         }
     },
 };
