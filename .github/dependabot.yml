@@ -1,0 +1,25 @@
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directories:
+      - /wrangler
+      - /function
+    schedule:
+      interval: weekly
+      day: saturday
+      time: "05:00"
+      timezone: Europe/Berlin
+    groups:
+      new-versions:
+        applies-to: version-updates
+        update-types:
+          - patch
+          - minor
+          - major
+      security-patches:
+        applies-to: security-updates
+        update-types:
+          - patch
+          - minor
+          - major
