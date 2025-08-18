@@ -3,7 +3,7 @@ version: 2
 updates:
   - package-ecosystem: npm
     directories:
-      - /wrangler
+      - /worker
       - /functions
     schedule:
       interval: weekly
