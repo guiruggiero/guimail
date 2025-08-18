@@ -1,23 +1,25 @@
-import {extractBody, sendReply} from "./message.js";
-// import {extractEvent} from "./llm.js"; // TODO: createEvent
-// import {createEvent} from "./calendar.js";
+// Imports
+import PostalMime from "postal-mime";
+import {createMimeMessage} from "mimetext";
+import {EmailMessage} from "cloudflare:email";
+
+// Initialization
+const MAX_EMAIL_SIZE = 5 * 1024 * 1024; // 5MB
 
 export default {
     // eslint-disable-next-line no-unused-vars
     async email(message, env, ctx) {
-        // List of allowed senders (forced lowercase)
+        // List of allowed senders
         const allowedSenders = [
             env.EMAIL_GUI,
             env.EMAIL_UM,
             // env.EMAIL_GEORGIA,
-        ].filter(Boolean).map(sender => sender.toLowerCase());
-        
-        const MAX_EMAIL_SIZE = 5 * 1024 * 1024; // 5MB
-        
+        ].filter(Boolean).map(sender => sender.toLowerCase()); // Forced lowercase
+
         console.log("Subject:", message.headers.get("Subject"));
 
-        // Check if sender is allowed (case-insensitive)
-        if (!allowedSenders.includes(message.from.toLowerCase())) {
+        // Check if sender is allowed
+        if (!allowedSenders.includes(message.from.toLowerCase())) { // Case-insensitive
             // TODO: log details somewhere - Sentry logs?
 
             message.setReject("Sender not allowed");
@@ -32,28 +34,70 @@ export default {
             return;
         }
 
-        // Extract email body from the message object
-        const messageBody = await extractBody(message);
-        
+        // --- TODO: implement in GuiMail
+        // parameters: message.headers, message.raw, message.from
+        // return: success/fail boolean; msg for true, text for false
 
-        // ---
+        // Extract body from message
+        let messageBody = "";
+        try {
+            const parser = new PostalMime();
+            const body = await parser.parse(message.raw);
 
+            // Return text body if it exists, otherwise the HTML body
+            messageBody = body.text || body.html;
+            if (!messageBody) throw new Error("Message has no text or HTML body");
 
-        // Extract event information with LLM - TODO: via function to reduce worker CPU usage?
-        // const eventData = await extractEvent(messageBody);
+        } catch (error) { // TODO: Sentry
+            console.log(error);
+            message.setReject("Failed to extract message body");
+        }
 
-        // Put event in the calendar - TODO: via Function to simplify auth?
-        // const eventLink = await createEvent(eventData);
-
-        // Create event with LLM directly (with MCP) - TODO
-        // const event = await createEvent(email.body);
-
-
-        // ---
-
+        // TODO: call Gemini
 
         // Confirm event creation
-        // await sendReply(message, env, eventLink);
-        await sendReply(message, env, messageBody);
+        try {
+            // Get relevant content from message
+            const originalSubject = message.headers.get("Subject") || "";
+            const messageId = message.headers.get("Message-ID");
+
+            // Initialize message object
+            const msg = createMimeMessage();
+
+            // Set fields for threading
+            const newSubject = originalSubject.trim().toLowerCase().startsWith("re:") ? originalSubject : `Re: ${originalSubject}`; // Add "Re:" prefix if not already present
+            msg.setSubject(newSubject);
+            msg.setHeader("In-Reply-To", messageId);
+            const newReferences = [message.headers.get("References"), messageId].filter(Boolean).join(" ");
+            msg.setHeader("References", newReferences);
+
+            // Set content for email body
+            msg.addMessage({
+                contentType: "text/plain",
+                // data: `Event created: ${eventLink}`, // TODO: return from GuiMail function
+                data: `Information extracted: ${messageBody}`,
+            });
+
+            // Set remaining fields
+            msg.setSender({name: "GuiMail", addr: env.EMAIL_GUIMAIL});
+            msg.setRecipient(message.from);
+
+
+            // ---
+
+
+            // Construct reply object
+            const replyMessage = new EmailMessage(
+                env.EMAIL_GUIMAIL,
+                message.from,
+                msg.asRaw(),
+            );
+
+            await message.reply(replyMessage);
+
+        } catch (error) { // TODO: Sentry
+            console.log(error);
+            message.setReject("Failed to respond");
+        }
     },
 };

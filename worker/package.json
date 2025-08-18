@@ -17,9 +17,9 @@
 		"wrangler": "^4.30.0"
 	},
 	"scripts": {
+		"whoami": "npx wrangler whoami",
 		"deploy": "npx wrangler deploy",
-		"update": "npm i -D wrangler@latest",
 		"key": "npx wrangler secret put/delete <KEY>",
-		"login": "export CLOUDFLARE_API_TOKEN=<TOKEN> && npx wrangler whoami"
+		"update": "npm i -D wrangler@latest"
 	}
 }
