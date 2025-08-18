@@ -5,7 +5,7 @@ import {extractBody, sendReply} from "./message.js";
 export default {
     // eslint-disable-next-line no-unused-vars
     async email(message, env, ctx) {
-        // List of allowed senders (lowercased for case-insensitive comparison)
+        // List of allowed senders (forced lowercase)
         const allowedSenders = [
             env.EMAIL_GUI,
             env.EMAIL_UM,

@@ -39,8 +39,7 @@ export async function sendReply(message, env, eventLink) {
         // Set content for email body
         msg.addMessage({
             contentType: "text/plain",
-            // data: `Event created: ${eventLink}`,
-            data: `messageBody: ${eventLink}`,
+            data: `Event created: ${eventLink}`,
         });
 
         // Set remaining fields
