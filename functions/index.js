@@ -1,32 +1,107 @@
-/**
- * Import function triggers from their respective submodules:
- *
- * const {onCall} = require("firebase-functions/v2/https");
- * const {onDocumentWritten} = require("firebase-functions/v2/firestore");
- *
- * See a full list of supported triggers at https://firebase.google.com/docs/functions
- */
+const fs = require("fs");
+const {GoogleGenAI} = require("@google/genai");
+const {onRequest} = require("firebase-functions/v2/https");
+const PostalMime = require("postal-mime");
+const {createMimeMessage} = require("mimetext");
 
-const {setGlobalOptions} = require("firebase-functions");
-const {onRequest} = require("firebase-functions/https");
-const logger = require("firebase-functions/logger");
+// Initializations
+const apiKey = process.env.GEMINI_API_KEY; // TODO: create new one, add in console
+const ai = new GoogleGenAI({apiKey: apiKey}); // TODO: same thing with generation (not chat)?
 
-// For cost control, you can set the maximum number of containers that can be
-// running at the same time. This helps mitigate the impact of unexpected
-// traffic spikes by instead downgrading performance. This limit is a
-// per-function limit. You can override the limit for each function using the
-// `maxInstances` option in the function's options, e.g.
-// `onRequest({ maxInstances: 5 }, (req, res) => { ... })`.
-// NOTE: setGlobalOptions does not apply to functions using the v1 API. V1
-// functions should each use functions.runWith({ maxInstances: 10 }) instead.
-// In the v1 API, each function can only serve one request per container, so
-// this will be the maximum concurrent request count.
-setGlobalOptions({ maxInstances: 10 });
+// Get system instructions from file
+const instructions = fs.readFileSync("prompt.txt", "utf8"); // TODO: write prompt
 
-// Create and deploy your first functions
-// https://firebase.google.com/docs/functions/get-started
+// Model configuration
+const modelConfig = { // TODO: no safety
+  model: "gemini-2.5-flash-lite-preview-06-17",
+  config: {
+    systemInstruction: instructions,
+    temperature: 0.2, // TODO: experiment
+    responseMimeType: "text/plain", // TODO: structured output, tool, MCP
+    thinkingconfig: { // TODO better with some?
+      thinkingbudget: 0,
+    },
+  },
+};
 
-// exports.helloWorld = onRequest((request, response) => {
-//   logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
+exports.guimail = onRequest(
+  {maxinstances: 2, timeoutSeconds: 20},
+  async (request, response) => {
+    // Extract body from message
+    let messageBody = "";
+    try {
+      const parser = new PostalMime();
+      const body = await parser.parse(request.query.raw);
+
+      // Return text body if it exists, otherwise the HTML body
+      messageBody = body.text || body.html;
+      if (!messageBody) throw new Error("Message has no text or HTML body");
+
+    } catch (error) {
+      console.log(error); // TODO: Sentry
+      response.send({
+        success: false,
+        msg: `GuiMail error: ${error.message}`
+      });
+    }
+
+    // Call Gemini - TODO
+    const chat = ai.chats.create(chatConfigWithHistory);
+    try{
+      // Call Gemini API and send response back
+      const result = await chat.sendMessage({message: messageBody}); // TODO: generation not chat
+      const guimailResponse = result.text;
+
+    } catch (error) {
+      console.log(error); // TODO: Sentry
+      response.send({
+        success: false,
+        msg: `GuiMail error: ${error.message}`
+      });
+    }
+
+    // Confirm event creation
+    try {
+      // Get relevant content from message
+      const originalSubject = request.query.headers.get("Subject") || "";
+      const messageID = request.query.headers.get("Message-ID");
+
+      // Initialize message object
+      const msg = createMimeMessage();
+
+      // Set fields for threading
+      const newSubject = originalSubject.trim().toLowerCase().startsWith("re:") ? originalSubject : `Re: ${originalSubject}`; // Add "Re:" prefix if not already present
+      msg.setSubject(newSubject);
+      msg.setHeader("In-Reply-To", messageID);
+      const newReferences = [request.query.headers.get("References"), messageID].filter(Boolean).join(" ");
+      msg.setHeader("References", newReferences);
+
+      // Set content for email body
+      msg.addMessage({
+        contentType: "text/plain",
+        // data: `Event created: ${eventLink}`, // TODO
+        data: `Information extracted: ${messageBody}`,
+      });
+
+      // Set remaining fields
+      msg.setSender({name: "GuiMail", addr: process.env.EMAIL_GUIMAIL}); // TODO: add in console
+      msg.setRecipient(request.query.from);
+
+      // Reply to message
+      response.send({
+        success: true,
+        msg: msg
+      });
+
+    } catch (error) {
+      console.log(error); // TODO: Sentry
+      response.send({
+        success: false,
+        msg: `GuiMail error: ${error.message}`
+      });
+    }
+
+    // Send error before function terminates
+    // await Sentry.flush(1000);
+  }
+);

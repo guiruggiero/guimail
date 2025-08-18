@@ -1,0 +1,3 @@
+- if not explicitly said, infer time zone based on language (example: if Portuguese, BRT is the correct time zone). If English, the email most likely will have the time zone like EST or PST fot the US or even CET for Europe.
+- output event link
+- output email subject for easy Gmail search
