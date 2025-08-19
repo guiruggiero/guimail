@@ -18,7 +18,7 @@
     "firebase-tools": "^14.12.1"
   },
   "scripts": {
-    "lint": "eslint .",
+    "lint": "ESLINT_USE_FLAT_CONFIG=false eslint .",
     "deploy": "npx firebase deploy --only functions"
   }
 }
