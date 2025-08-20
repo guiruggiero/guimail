@@ -5,25 +5,49 @@ const {onRequest} = require("firebase-functions/v2/https");
 const PostalMime = require("postal-mime");
 const {createMimeMessage} = require("mimetext");
 
-// Initializations
-const apiKey = process.env.GEMINI_API_KEY; // TODO: add in console
-const ai = new GoogleGenAI({apiKey: apiKey}); // TODO: chat vs. generation?
-
 // Get system instructions from file
-const instructions = fs.readFileSync("prompt.txt", "utf8"); // TODO
+const instructions = fs.readFileSync("prompt.txt", "utf8");
 
 // Model configuration
-const modelConfig = { // TODO: no safety
-  model: "gemini-2.5-flash-lite-preview-06-17",
+const modelConfig = {
+  model: "gemini-2.5-pro",
   config: {
     systemInstruction: instructions,
-    temperature: 0.2, // TODO: experiment
-    responseMimeType: "text/plain", // TODO: structured output, tool, MCP
-    thinkingconfig: { // TODO better with some?
+    temperature: 0.1,
+    thinkingconfig: {
       thinkingbudget: 0,
+    },
+    responseMimeType: "application/json", // Structured output
+    responseSchema: {
+      type: "object",
+      properties: {
+        summary: {type: "string"},
+        start: {
+          type: "object",
+          properties: {
+            dateTime: {type: "string"}, // ISO format
+            timeZone: {type: "string"},
+          },
+        },
+        end: {
+          type: "object",
+          properties: {
+            dateTime: {type: "string"}, // ISO format
+            timeZone: {type: "string"},
+          },
+        },
+        location: {type: "string"},
+        description: {type: "string"},
+        confidence: {type: "number"}, // 0-1 score
+      },
+      required: ["summary", "start", "end", "confidence"],
     },
   },
 };
+
+// Initialize model
+const apiKey = process.env.GEMINI_API_KEY; // TODO: add in console
+const ai = new GoogleGenAI({apiKey: apiKey});
 
 // Function configuration
 const functionConfig = {
@@ -39,40 +63,59 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
     const parser = new PostalMime();
     const body = await parser.parse(request.query.raw);
 
-    // Return text body if it exists, otherwise the HTML body
+    // Use text body if it exists, otherwise the HTML body
     messageBody = body.text || body.html;
     if (!messageBody) throw new Error("Message has no text or HTML body");
   } catch (error) {
     console.log(error); // TODO: Sentry
-    // Send error before function terminates
     // await Sentry.flush(2000);
 
     response.send({
       success: false,
-      msg: `GuiMail error: ${error.message}`,
+      msg: `GuiMail error - body extraction: ${error.message}`,
     });
+    return;
   }
 
-  // Call Gemini - TODO
-  const chat = ai.chats.create(modelConfig);
-  let guimailResponse;
+  // Call Gemini
+  let eventData = {};
   try {
-    // Call Gemini API and send response back
-    const result = await chat.sendMessage({message: messageBody}); // TODO
-    guimailResponse = result.text;
+    const result = await ai.models.generateContent({
+      ...modelConfig,
+      contents: messageBody,
+    });
+    eventData = JSON.parse(result.text);
+
+    // Validate confidence threshold
+    if (eventData.confidence < 0.5) {
+      throw new Error("Low confidence in event extraction");
+    }
   } catch (error) {
     console.log(error); // TODO: Sentry
-    // Send error before function terminates
     // await Sentry.flush(2000);
 
     response.send({
       success: false,
-      msg: `GuiMail error: ${error.message}`,
+      msg: `GuiMail error - Gemini call: ${error.message}`,
     });
+    return;
   }
 
-  // TODO: Google Calendar API call
-  console.log(guimailResponse);
+  // Create calendar event
+  let eventLink = "";
+  try {
+    // eslint-disable-next-line no-undef
+    eventLink = await createCalendarEvent(eventData); // TODO: implement
+  } catch (error) {
+    console.log(error); // TODO: Sentry
+    // await Sentry.flush(2000);
+
+    response.send({
+      success: false,
+      msg: `GuiMail error - Google Calendar call: ${error.message}`,
+    });
+    return;
+  }
 
   // Confirm event creation
   try {
@@ -85,7 +128,7 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
 
     // Set fields for threading
     const subject = originalSubject.trim().toLowerCase().startsWith("re:") ?
-    originalSubject : `Re: ${originalSubject}`; // Add "Re:" prefix
+      originalSubject : `Re: ${originalSubject}`; // Add "Re:" prefix
     msg.setSubject(subject);
     msg.setHeader("In-Reply-To", messageID);
     const newReferences = [request.query.headers.get("References"),
@@ -95,11 +138,11 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
     // Set content for email body
     msg.addMessage({
       contentType: "text/plain",
-      // data: `Event created: ${eventLink}`, // TODO
-      data: `Information extracted: ${messageBody}`,
+      data: `Event created: ${eventLink}`,
+      // data: `Information extracted: ${messageBody}`, // TODO: testing
     });
 
-    // Set remaining fields - TODO
+    // Set remaining fields - TODO: add in console
     msg.setSender({name: "GuiMail", addr: process.env.EMAIL_GUIMAIL});
     msg.setRecipient(request.query.from);
 
@@ -108,14 +151,15 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
       success: true,
       msg: msg,
     });
+    return;
   } catch (error) {
     console.log(error); // TODO: Sentry
-    // Send error before function terminates
     // await Sentry.flush(2000);
 
     response.send({
       success: false,
-      msg: `GuiMail error: ${error.message}`,
+      msg: `GuiMail error - reply creation: ${error.message}`,
     });
+    return;
   }
 });
