@@ -3,7 +3,8 @@ const fs = require("fs");
 const {GoogleGenAI} = require("@google/genai");
 const {onRequest} = require("firebase-functions/v2/https");
 const PostalMime = require("postal-mime");
-const {createMimeMessage} = require("mimetext");
+const ical = require("ical-generator");
+const MailComposer = require("nodemailer/lib/mail-composer");
 
 // Get system instructions from file
 const instructions = fs.readFileSync("prompt.txt", "utf8");
@@ -46,8 +47,7 @@ const modelConfig = {
 };
 
 // Initialize model
-const apiKey = process.env.GEMINI_API_KEY; // TODO: add in console
-const ai = new GoogleGenAI({apiKey: apiKey});
+const ai = new GoogleGenAI({apiKey: process.env.GEMINI_API_KEY});
 
 // Function configuration
 const functionConfig = {
@@ -101,55 +101,67 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
     return;
   }
 
-  // Create calendar event
-  let eventLink = "";
+  // Create iCal invite
+  let icsString = "";
   try {
-    // eslint-disable-next-line no-undef
-    eventLink = await createCalendarEvent(eventData); // TODO: implement
+    const cal = ical({name: "Test calendar"});
+    cal.createEvent({
+      start: new Date(eventData.start.dateTime),
+      end: new Date(eventData.end.dateTime),
+      summary: eventData.summary,
+      description: eventData.description,
+      location: eventData.location,
+    });
+    icsString = cal.toString();
   } catch (error) {
     console.log(error); // TODO: Sentry
     // await Sentry.flush(2000);
 
     response.send({
       success: false,
-      msg: `GuiMail error - Google Calendar call: ${error.message}`,
+      msg: `GuiMail error - iCal creation: ${error.message}`,
     });
     return;
   }
 
-  // Confirm event creation
+  // Create message back
   try {
-    // Get relevant content from message
+    // Get relevant content from original message
     const originalSubject = request.query.headers.get("Subject") || "";
     const messageID = request.query.headers.get("Message-ID");
-
-    // Initialize message object
-    const msg = createMimeMessage();
 
     // Set fields for threading
     const subject = originalSubject.trim().toLowerCase().startsWith("re:") ?
       originalSubject : `Re: ${originalSubject}`; // Add "Re:" prefix
-    msg.setSubject(subject);
-    msg.setHeader("In-Reply-To", messageID);
     const newReferences = [request.query.headers.get("References"),
       messageID].filter(Boolean).join(" ");
-    msg.setHeader("References", newReferences);
 
-    // Set content for email body
-    msg.addMessage({
-      contentType: "text/plain",
-      data: `Event created: ${eventLink}`,
-      // data: `Information extracted: ${messageBody}`, // TODO: testing
+    // Construct message object
+    const reply = new MailComposer({
+      from: `"GuiMail" <${process.env.EMAIL_GUIMAIL}>`,
+      // to: request.query.from,
+      subject: subject,
+      inReplyTo: messageID,
+      references: newReferences,
+      text: eventData, // html
+      icalEvent: {
+        method: "REQUEST", // PUBLISH
+        content: icsString,
+      },
     });
 
-    // Set remaining fields - TODO: add in console
-    msg.setSender({name: "GuiMail", addr: process.env.EMAIL_GUIMAIL});
-    msg.setRecipient(request.query.from);
+    // Generate the message
+    const rawReply = await new Promise((resolve, reject) => {
+      reply.compile().build((error, message) => {
+        if (error) return reject(error);
+        return resolve(message.toString());
+      });
+    });
 
     // Reply to message
     response.send({
       success: true,
-      msg: msg,
+      msg: rawReply,
     });
     return;
   } catch (error) {

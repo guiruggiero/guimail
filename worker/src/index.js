@@ -84,7 +84,7 @@ export default {
                 const replyMessage = new EmailMessage(
                     env.EMAIL_GUIMAIL,
                     message.from,
-                    msg.asRaw(),
+                    msg,
                 );
 
                 await message.reply(replyMessage);

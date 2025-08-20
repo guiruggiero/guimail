@@ -7,9 +7,10 @@
   "private": true,
   "main": "index.js",
   "dependencies": {
-    "@google/genai": "^1.14.0",
+    "@google/genai": "^1.15.0",
     "firebase-functions": "^6.4.0",
-    "mimetext": "^3.0.27",
+    "ical-generator": "^9.0.0",
+    "nodemailer": "^7.0.5",
     "postal-mime": "^2.4.4"
   },
   "devDependencies": {
@@ -20,6 +21,7 @@
   "scripts": {
     "lint": "ESLINT_USE_FLAT_CONFIG=false eslint .",
     "lint-fix": "ESLINT_USE_FLAT_CONFIG=false eslint . --fix",
-    "deploy": "npx firebase deploy --only functions"
+    "deploy": "npx firebase deploy --only functions:guimail",
+    "delete": "npx firebase functions:delete guimail"
   }
 }
