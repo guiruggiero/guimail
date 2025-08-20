@@ -3,7 +3,7 @@ import axios from "axios";
 import {EmailMessage} from "cloudflare:email";
 
 // Initializations
-const cloudFunctionURL = "https://guimail.guiruggiero.com/";
+const cloudFunctionURL = "https://guimail.guiruggiero.com/"; // TODO: limit access
 const MAX_EMAIL_SIZE = 5 * 1024 * 1024; // 5MB
 
 // Axios instance with retry configuration
