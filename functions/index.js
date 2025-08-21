@@ -2,14 +2,16 @@
 const fs = require("fs");
 const {GoogleGenAI} = require("@google/genai");
 const {onRequest} = require("firebase-functions/v2/https");
-const PostalMime = require("postal-mime");
-const ical = require("ical-generator");
+const {default: PostalMime} = require("postal-mime");
+const {default: ical} = require("ical-generator");
 const MailComposer = require("nodemailer/lib/mail-composer");
 
-// Get system instructions from file
-const instructions = fs.readFileSync("prompt.txt", "utf8");
+// Initializtions
+const ai = new GoogleGenAI({apiKey: process.env.GEMINI_API_KEY});
+const parser = new PostalMime();
 
 // Model configuration
+const instructions = fs.readFileSync("prompt.txt", "utf8");
 const modelConfig = {
   model: "gemini-2.5-pro",
   config: {
@@ -46,14 +48,11 @@ const modelConfig = {
   },
 };
 
-// Initialize model
-const ai = new GoogleGenAI({apiKey: process.env.GEMINI_API_KEY});
-
 // Function configuration
 const functionConfig = {
   cors: true,
   maxInstances: 2,
-  timeoutSeconds: 20,
+  timeoutSeconds: 30,
 };
 
 exports.guimail = onRequest(functionConfig, async (request, response) => {
@@ -66,21 +65,20 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
   }
 
   // Extract information from request
-  const {date, subject: originalSubject, messageID,
-    references, from} = request.query;
+  const {from, subject: originalSubject, messageID, references} = request.query;
   const raw = request.rawBody;
 
   // Extract body from message
   let messageBody = "";
   try {
     // Parse the message stream
-    const body = await PostalMime.parse(raw);
+    const body = await parser.parse(raw);
 
     // Use text body if it exists, otherwise the HTML body
     messageBody = body.text || body.html;
     if (!messageBody) throw new Error("Message has no text or HTML body");
   } catch (error) {
-    console.log(error); // TODO: Sentry
+    console.error(error); // TODO: Sentry
     // await Sentry.flush(2000);
 
     response.status(400).send(`GuiMail - body extraction: ${error.message}`);
@@ -90,16 +88,9 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
   // Call Gemini
   let eventData = {};
   try {
-    const modelInput = `
-      Current date: ${date}
-      From: ${from}
-      Subject: ${originalSubject}
-      Body: ${messageBody}
-    `;
-
     const result = await ai.models.generateContent({
       ...modelConfig,
-      contents: modelInput,
+      contents: messageBody,
     });
     eventData = JSON.parse(result.text);
 
@@ -108,7 +99,7 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
       throw new Error("Low confidence in event extraction");
     }
   } catch (error) {
-    console.log(error); // TODO: Sentry
+    console.error(error); // TODO: Sentry
     // await Sentry.flush(2000);
 
     response.status(502).send(`GuiMail - Gemini call: ${error.message}`);
@@ -118,17 +109,18 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
   // Create iCal invite
   let icsString = "";
   try {
-    const cal = ical({name: "Test calendar"});
+    const cal = ical({name: "GuiMail events"});
     cal.createEvent({
       start: new Date(eventData.start.dateTime),
       end: new Date(eventData.end.dateTime),
+      timezone: eventData.start.timeZone,
       summary: eventData.summary,
       description: eventData.description,
       location: eventData.location,
     });
     icsString = cal.toString();
   } catch (error) {
-    console.log(error); // TODO: Sentry
+    console.error(error); // TODO: Sentry
     // await Sentry.flush(2000);
 
     response.status(500).send(`GuiMail - iCal creation: ${error.message}`);
@@ -145,13 +137,14 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
     // Construct message object
     const reply = new MailComposer({
       from: `"GuiMail" <${process.env.EMAIL_GUIMAIL}>`,
-      // to: request.query.from,
-      subject: subject,
+      to: from,
+      subject,
       inReplyTo: messageID,
       references: newReferences,
-      text: eventData, // html
+      text: `Event created. Confidence = ${eventData.confidence}.\n\n` +
+        "Thank you for using GuiMail!",
       icalEvent: {
-        method: "REQUEST", // PUBLISH
+        method: "REQUEST",
         content: icsString,
       },
     });
@@ -168,7 +161,7 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
     response.status(200).send(rawReply);
     return;
   } catch (error) {
-    console.log(error); // TODO: Sentry
+    console.error(error); // TODO: Sentry
     // await Sentry.flush(2000);
 
     response.status(500).send(`GuiMail - reply creation: ${error.message}`);

@@ -7,17 +7,17 @@ import {EmailMessage} from "cloudflare:email";
 const cloudFunctionURL = "https://guimail.guiruggiero.com/";
 const MAX_EMAIL_SIZE = 5 * 1024 * 1024; // 5MB
 
-// Axios instance with retry configuration
+// Axios instance
 const axiosInstance = axios.create({
     baseURL: cloudFunctionURL,
-    timeout: 4000, // 4s
+    timeout: 32000, // 32s
 });
 
 // Retry configuration
 axiosRetry(axiosInstance, {
-    retries: 2, // Number of retry attempts
+    retries: 2, // Retry attempts
     retryDelay: axiosRetry.exponentialDelay, // 1s then 2s between retries
-    // Only retry on network errors or 5xx responses
+    // Only retry on network or 5xx errors
     retryCondition: (error) => {
         return axiosRetry.isNetworkOrIdempotentRequestError(error) ||
                (error.response && error.response.status >= 500);
@@ -38,8 +38,9 @@ export default {
         // List of allowed senders
         const allowedSenders = [
             env.EMAIL_GUI,
-            // env.EMAIL_UM,
-            // env.EMAIL_GEORGIA,
+            env.EMAIL_UM,
+            env.EMAIL_GEORGIA,
+            env.EMAIL_PANDA,
         ].filter(Boolean).map(sender => sender.toLowerCase()); // Forced lowercase
 
         // Check if sender is allowed
@@ -60,7 +61,6 @@ export default {
 
         // Extract other message data
         const raw = message.raw;
-        const date = message.headers.get("Date");
         const messageID = message.headers.get("Message-ID");
         const references = message.headers.get("References");
 
@@ -72,7 +72,7 @@ export default {
                     "Authorization": `Bearer ${env.WORKER_SECRET}`,
                     "Content-Type": "application/octet-stream",
                 },
-                params: {from, date, subject, messageID, references},
+                params: {from, subject, messageID, references},
             });
         } catch (error) {
             console.error(error); // TODO: Sentry
