@@ -61,7 +61,7 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
   const authHeader = request.headers.authorization;
   const expectedToken = `Bearer ${process.env.WORKER_SECRET}`;
   if (authHeader !== expectedToken) {
-    response.status(401).send("Unauthorized requester");
+    response.status(401).send("GuiMail - unauthorized requester");
     return;
   }
 
@@ -83,7 +83,7 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
     console.log(error); // TODO: Sentry
     // await Sentry.flush(2000);
 
-    response.status(400).send(`GuiMail error - body extraction: ${error.message}`);
+    response.status(400).send(`GuiMail - body extraction: ${error.message}`);
     return;
   }
 
@@ -111,7 +111,7 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
     console.log(error); // TODO: Sentry
     // await Sentry.flush(2000);
 
-    response.status(502).send(`GuiMail error - Gemini call: ${error.message}`);
+    response.status(502).send(`GuiMail - Gemini call: ${error.message}`);
     return;
   }
 
@@ -131,7 +131,7 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
     console.log(error); // TODO: Sentry
     // await Sentry.flush(2000);
 
-    response.status(500).send(`GuiMail error - iCal creation: ${error.message}`);
+    response.status(500).send(`GuiMail - iCal creation: ${error.message}`);
     return;
   }
 
@@ -171,7 +171,7 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
     console.log(error); // TODO: Sentry
     // await Sentry.flush(2000);
 
-    response.status(500).send(`GuiMail error - reply creation: ${error.message}`);
+    response.status(500).send(`GuiMail - reply creation: ${error.message}`);
     return;
   }
 });
