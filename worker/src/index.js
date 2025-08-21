@@ -3,7 +3,7 @@ import axios from "axios";
 import {EmailMessage} from "cloudflare:email";
 
 // Initializations
-const cloudFunctionURL = "https://guimail.guiruggiero.com/"; // TODO: limit access
+const cloudFunctionURL = "https://guimail.guiruggiero.com/";
 const MAX_EMAIL_SIZE = 5 * 1024 * 1024; // 5MB
 
 // Axios instance with retry configuration
@@ -67,11 +67,17 @@ export default {
         }
 
         // Call GuiMail
-        const response = await axiosInstance.post("", null, {params: {
-            from: message.from,
-            headers: message.headers,
-            raw: message.raw,
-        }}).catch(error => { // Error calling GuiMail
+        const response = await axiosInstance.post("", null, {
+            headers: {"Authorization": `Bearer ${env.WORKER_SECRET}`}, // TODO: why quotes?
+            params: {
+                from: message.from,
+                raw: message.raw,
+                date: message.headers.get("Date"),
+                subject: message.headers.get("Subject"),
+                messageID: message.headers.get("Message-ID"),
+                references: message.headers.get("References"),
+            },
+        }).catch(error => { // Error calling GuiMail
             console.error(error); // TODO: Sentry
             message.setReject("Failed to call GuiMail");
         });

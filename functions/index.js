@@ -57,11 +57,23 @@ const functionConfig = {
 };
 
 exports.guimail = onRequest(functionConfig, async (request, response) => {
+  // Authenticate worker
+  const authHeader = request.headers.authorization;
+  const expectedToken = `Bearer ${process.env.WORKER_SECRET}`;
+  if (authHeader !== expectedToken) {
+    response.status(401).send("Unauthorized"); // TODO: status vs. success
+    return;
+  }
+
+  // Extract information from request
+  const {date, subject: originalSubject, messageID,
+    references, from, raw} = request.query;
+
   // Extract body from message
   let messageBody = "";
   try {
     const parser = new PostalMime();
-    const body = await parser.parse(request.query.raw);
+    const body = await parser.parse(raw);
 
     // Use text body if it exists, otherwise the HTML body
     messageBody = body.text || body.html;
@@ -80,9 +92,16 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
   // Call Gemini
   let eventData = {};
   try {
+    const modelInput = `
+      Current date: ${date}
+      From: ${from}
+      Subject: ${originalSubject}
+      Body: ${messageBody}
+    `;
+
     const result = await ai.models.generateContent({
       ...modelConfig,
-      contents: messageBody,
+      contents: modelInput,
     });
     eventData = JSON.parse(result.text);
 
@@ -126,15 +145,10 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
 
   // Create message back
   try {
-    // Get relevant content from original message
-    const originalSubject = request.query.headers.get("Subject") || "";
-    const messageID = request.query.headers.get("Message-ID");
-
     // Set fields for threading
     const subject = originalSubject.trim().toLowerCase().startsWith("re:") ?
       originalSubject : `Re: ${originalSubject}`; // Add "Re:" prefix
-    const newReferences = [request.query.headers.get("References"),
-      messageID].filter(Boolean).join(" ");
+    const newReferences = [references, messageID].filter(Boolean).join(" ");
 
     // Construct message object
     const reply = new MailComposer({
