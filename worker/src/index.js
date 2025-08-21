@@ -18,7 +18,10 @@ axiosRetry(axiosInstance, {
     retries: 2, // Number of retry attempts
     retryDelay: axiosRetry.exponentialDelay, // 1s then 2s between retries
     // Only retry on network errors or 5xx responses
-    retryCondition: (error) => axiosRetry.isNetworkOrIdempotentRequestError(error),
+    retryCondition: (error) => {
+        return axiosRetry.isNetworkOrIdempotentRequestError(error) ||
+               (error.response && error.response.status >= 500);
+    },
 });
 
 export default {
@@ -62,25 +65,22 @@ export default {
         const references = message.headers.get("References");
 
         // Call GuiMail
-        const response = await axiosInstance.post("", raw, {
-            headers: {
-                "Authorization": `Bearer ${env.WORKER_SECRET}`,
-                "Content-Type": "application/octet-stream",
-            },
-            params: {
-                from: from,
-                date: date,
-                subject: subject,
-                messageID: messageID,
-                references: references,
-            },
-        }).catch(error => {
+        let response;
+        try {
+            response = await axiosInstance.post("", raw, {
+                headers: {
+                    "Authorization": `Bearer ${env.WORKER_SECRET}`,
+                    "Content-Type": "application/octet-stream",
+                },
+                params: {from, date, subject, messageID, references},
+            });
+        } catch (error) {
             console.error(error); // TODO: Sentry
             // await Sentry.flush(2000);
 
             message.setReject("Failed to call GuiMail");
             return;
-        });
+        }
 
         // Construct reply object
         try {
