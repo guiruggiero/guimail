@@ -61,19 +61,20 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
   const authHeader = request.headers.authorization;
   const expectedToken = `Bearer ${process.env.WORKER_SECRET}`;
   if (authHeader !== expectedToken) {
-    response.status(401).send("Unauthorized"); // TODO: status vs. success
+    response.status(401).send("Unauthorized requester");
     return;
   }
 
   // Extract information from request
   const {date, subject: originalSubject, messageID,
-    references, from, raw} = request.query;
+    references, from} = request.query;
+  const raw = request.rawBody;
 
   // Extract body from message
   let messageBody = "";
   try {
-    const parser = new PostalMime();
-    const body = await parser.parse(raw);
+    // Parse the message stream
+    const body = await PostalMime.parse(raw);
 
     // Use text body if it exists, otherwise the HTML body
     messageBody = body.text || body.html;
@@ -82,10 +83,7 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
     console.log(error); // TODO: Sentry
     // await Sentry.flush(2000);
 
-    response.send({
-      success: false,
-      msg: `GuiMail error - body extraction: ${error.message}`,
-    });
+    response.status(400).send(`GuiMail error - body extraction: ${error.message}`);
     return;
   }
 
@@ -113,10 +111,7 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
     console.log(error); // TODO: Sentry
     // await Sentry.flush(2000);
 
-    response.send({
-      success: false,
-      msg: `GuiMail error - Gemini call: ${error.message}`,
-    });
+    response.status(502).send(`GuiMail error - Gemini call: ${error.message}`);
     return;
   }
 
@@ -136,10 +131,7 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
     console.log(error); // TODO: Sentry
     // await Sentry.flush(2000);
 
-    response.send({
-      success: false,
-      msg: `GuiMail error - iCal creation: ${error.message}`,
-    });
+    response.status(500).send(`GuiMail error - iCal creation: ${error.message}`);
     return;
   }
 
@@ -173,19 +165,13 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
     });
 
     // Reply to message
-    response.send({
-      success: true,
-      msg: rawReply,
-    });
+    response.status(200).send(rawReply);
     return;
   } catch (error) {
     console.log(error); // TODO: Sentry
     // await Sentry.flush(2000);
 
-    response.send({
-      success: false,
-      msg: `GuiMail error - reply creation: ${error.message}`,
-    });
+    response.status(500).send(`GuiMail error - reply creation: ${error.message}`);
     return;
   }
 });

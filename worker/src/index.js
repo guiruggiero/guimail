@@ -16,7 +16,7 @@ const axiosInstance = axios.create({
     },
 });
 
-// Interceptor to handle retries
+// Interceptor to handle retries - TODO: remove/simplify if CPU usage is high?
 axiosInstance.interceptors.response.use(null, async (error) => {
     const config = error.config;
     
@@ -77,42 +77,43 @@ export default {
         }
 
         // Call GuiMail
-        const response = await axiosInstance.post("", null, {
-            headers: {"Authorization": `Bearer ${env.WORKER_SECRET}`},
+        const response = await axiosInstance.post("", raw, {
+            headers: {
+                "Authorization": `Bearer ${env.WORKER_SECRET}`,
+                "Content-Type": "application/octet-stream",
+            },
             params: {
                 from: from,
-                raw: raw, // ReadableStream
                 date: date,
                 subject: subject,
                 messageID: messageID,
                 references: references,
             },
-        }).catch(error => { // Error calling GuiMail
+        }).catch(error => {
             console.error(error); // TODO: Sentry
+            // await Sentry.flush(2000);
+
             message.setReject("Failed to call GuiMail");
+            return;
         });
-        const msg = response.data.msg;
 
-        // GuiMail call successful
-        if (response.data.success == true) {
-            try {
-                // Construct reply object
-                const replyMessage = new EmailMessage(
-                    env.EMAIL_GUIMAIL,
-                    from,
-                    msg,
-                );
+        // Construct reply object
+        try {
+            const replyMessage = new EmailMessage(
+                env.EMAIL_GUIMAIL,
+                from,
+                response.data,
+            );
 
-                await message.reply(replyMessage);
+            await message.reply(replyMessage);
+            return;
+            
+        } catch (error) {
+            console.error(error); // TODO: Sentry
+            // await Sentry.flush(2000);
 
-            } catch (error) {
-                console.error(error); // TODO: Sentry
-                message.setReject("Failed to respond");
-            }
-        
-        // Error during GuiMail call
-        } else { // TODO: Sentry inside function?
-            message.setReject(msg);
+            message.setReject("Failed to respond");
+            return;
         }
     },
 };
