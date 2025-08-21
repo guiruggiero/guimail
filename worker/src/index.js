@@ -41,6 +41,18 @@ axiosInstance.interceptors.response.use(null, async (error) => {
 export default {
     // eslint-disable-next-line no-unused-vars
     async email(message, env, ctx) {
+        // Extract message data
+        const from = message.from;
+        const raw = message.raw;
+        const rawSize = message.rawSize;
+        const date = message.headers.get("Date");
+        const subject = message.headers.get("Subject");
+        const messageID = message.headers.get("Message-ID");
+        const references = message.headers.get("References");
+
+        // Show on Cloudflare console
+        console.log("Subject:", subject);
+
         // List of allowed senders
         const allowedSenders = [
             env.EMAIL_GUI,
@@ -48,10 +60,8 @@ export default {
             // env.EMAIL_GEORGIA,
         ].filter(Boolean).map(sender => sender.toLowerCase()); // Forced lowercase
 
-        console.log("Subject:", message.headers.get("Subject"));
-
         // Check if sender is allowed
-        if (!allowedSenders.includes(message.from.toLowerCase())) { // Case-insensitive
+        if (!allowedSenders.includes(from.toLowerCase())) { // Case-insensitive
             // TODO: log details somewhere - Sentry logs?
 
             message.setReject("Sender not allowed");
@@ -59,7 +69,7 @@ export default {
         }
 
         // Check for email size
-        if (message.rawSize > MAX_EMAIL_SIZE) {
+        if (rawSize > MAX_EMAIL_SIZE) {
             // TODO: log details somewhere - Sentry logs?
 
             message.setReject("Email is too large");
@@ -68,14 +78,14 @@ export default {
 
         // Call GuiMail
         const response = await axiosInstance.post("", null, {
-            headers: {"Authorization": `Bearer ${env.WORKER_SECRET}`}, // TODO: why quotes?
+            headers: {"Authorization": `Bearer ${env.WORKER_SECRET}`},
             params: {
-                from: message.from,
-                raw: message.raw,
-                date: message.headers.get("Date"),
-                subject: message.headers.get("Subject"),
-                messageID: message.headers.get("Message-ID"),
-                references: message.headers.get("References"),
+                from: from,
+                raw: raw, // ReadableStream
+                date: date,
+                subject: subject,
+                messageID: messageID,
+                references: references,
             },
         }).catch(error => { // Error calling GuiMail
             console.error(error); // TODO: Sentry
@@ -89,7 +99,7 @@ export default {
                 // Construct reply object
                 const replyMessage = new EmailMessage(
                     env.EMAIL_GUIMAIL,
-                    message.from,
+                    from,
                     msg,
                 );
 
