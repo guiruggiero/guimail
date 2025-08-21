@@ -1,5 +1,6 @@
 // Imports
 import axios from "axios";
+import axiosRetry from "axios-retry";
 import {EmailMessage} from "cloudflare:email";
 
 // Initializations
@@ -10,45 +11,23 @@ const MAX_EMAIL_SIZE = 5 * 1024 * 1024; // 5MB
 const axiosInstance = axios.create({
     baseURL: cloudFunctionURL,
     timeout: 4000, // 4s
-    retry: 2, // Number of retry attempts
-    retryDelay: (retryCount) => {
-        return retryCount * 1000; // 1s, then 2s between retries
-    },
 });
 
-// Interceptor to handle retries - TODO: remove/simplify if CPU usage is high?
-axiosInstance.interceptors.response.use(null, async (error) => {
-    const config = error.config;
-    
+// Retry configuration
+axiosRetry(axiosInstance, {
+    retries: 2, // Number of retry attempts
+    retryDelay: axiosRetry.exponentialDelay, // 1s then 2s between retries
     // Only retry on network errors or 5xx responses
-    if (!config || !config.retry || (error.response && error.response.status < 500 && error.response.status >= 0)) {
-        return Promise.reject(error);
-    }
-    
-    config.retryCount = config.retryCount || 0;
-    
-    if (config.retryCount >= config.retry) {
-        return Promise.reject(error);
-    }
-    
-    config.retryCount++;
-    const delay = config.retryDelay(config.retryCount);
-    
-    await new Promise(resolve => setTimeout(resolve, delay));
-    return axiosInstance(config);
+    retryCondition: (error) => axiosRetry.isNetworkOrIdempotentRequestError(error),
 });
 
 export default {
     // eslint-disable-next-line no-unused-vars
     async email(message, env, ctx) {
-        // Extract message data
-        const from = message.from;
-        const raw = message.raw;
-        const rawSize = message.rawSize;
-        const date = message.headers.get("Date");
+        // Extract essential message data
         const subject = message.headers.get("Subject");
-        const messageID = message.headers.get("Message-ID");
-        const references = message.headers.get("References");
+        const from = message.from;
+        const rawSize = message.rawSize;
 
         // Show on Cloudflare console
         console.log("Subject:", subject);
@@ -75,6 +54,12 @@ export default {
             message.setReject("Email is too large");
             return;
         }
+
+        // Extract other message data
+        const raw = message.raw;
+        const date = message.headers.get("Date");
+        const messageID = message.headers.get("Message-ID");
+        const references = message.headers.get("References");
 
         // Call GuiMail
         const response = await axiosInstance.post("", raw, {
