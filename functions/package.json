@@ -14,9 +14,9 @@
     "postal-mime": "^2.4.4"
   },
   "devDependencies": {
-    "eslint": "^9.33.0",
+    "eslint": "^9.34.0",
     "eslint-config-google": "^0.14.0",
-    "firebase-tools": "^14.12.1"
+    "firebase-tools": "^14.14.0"
   },
   "scripts": {
     "lint": "ESLINT_USE_FLAT_CONFIG=false eslint .",
