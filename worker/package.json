@@ -2,10 +2,11 @@
 	"name": "guimail",
 	"author": "Gui Ruggiero",
 	"homepage": "https://guiruggiero.com/",
-	"version": "0.1",
+	"version": "1.0",
 	"type": "module",
 	"main": "src/index.js",
 	"dependencies": {
+		"@sentry/cloudflare": "^10.5.0",
 		"axios": "^1.11.0",
 		"axios-retry": "^4.5.0"
 	},

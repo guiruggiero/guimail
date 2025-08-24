@@ -6,7 +6,7 @@
 	"observability": {
 		"enabled": true
 	},
-	"compatibility_date": "2025-08-14",
+	"compatibility_date": "2025-08-21",
 	"compatibility_flags": [
 		"nodejs_compat"
 	]

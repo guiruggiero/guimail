@@ -1,4 +1,5 @@
 // Imports
+const Sentry = require("@sentry/node");
 const fs = require("fs");
 const {GoogleGenAI} = require("@google/genai");
 const {onRequest} = require("firebase-functions/v2/https");
@@ -6,7 +7,12 @@ const {default: PostalMime} = require("postal-mime");
 const {default: ical} = require("ical-generator");
 const MailComposer = require("nodemailer/lib/mail-composer");
 
-// Initializtions
+// Initializations
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  tracesSampleRate: 1.0,
+  enableLogs: true,
+});
 const ai = new GoogleGenAI({apiKey: process.env.GEMINI_API_KEY});
 const parser = new PostalMime();
 
@@ -56,11 +62,17 @@ const functionConfig = {
 };
 
 exports.guimail = onRequest(functionConfig, async (request, response) => {
+  Sentry.logger.info("Function: started");
+
   // Authenticate worker
   const authHeader = request.headers.authorization;
   const expectedToken = `Bearer ${process.env.WORKER_SECRET}`;
   if (authHeader !== expectedToken) {
-    response.status(401).send("GuiMail - unauthorized requester");
+    Sentry.captureException(new Error("Request not authenticated"),
+        {contexts: {authHeader}});
+    await Sentry.flush(2000);
+
+    response.status(401).send("Request not authenticated");
     return;
   }
 
@@ -69,19 +81,25 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
   const raw = request.rawBody;
 
   // Extract body from message
+  let body = {};
   let messageBody = "";
   try {
     // Parse the message stream
-    const body = await parser.parse(raw);
+    body = await parser.parse(raw);
 
     // Use text body if it exists, otherwise the HTML body
     messageBody = body.text || body.html;
     if (!messageBody) throw new Error("Message has no text or HTML body");
+    Sentry.logger.info("Function: message body", {messageBody});
   } catch (error) {
-    console.error(error); // TODO: Sentry
-    // await Sentry.flush(2000);
+    Sentry.captureException(error, {contexts: {
+      rawBody: raw,
+      body,
+      messageBody,
+    }});
+    await Sentry.flush(2000);
 
-    response.status(400).send(`GuiMail - body extraction: ${error.message}`);
+    response.status(400).send("Body extraction error");
     return;
   }
 
@@ -93,16 +111,17 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
       contents: messageBody,
     });
     eventData = JSON.parse(result.text);
+    Sentry.logger.info("Function: event title", {title: eventData.summary});
 
     // Validate confidence threshold
     if (eventData.confidence < 0.5) {
-      throw new Error("Low confidence in event extraction");
+      throw new Error(`Low confidence: ${eventData.confidence}`);
     }
   } catch (error) {
-    console.error(error); // TODO: Sentry
-    // await Sentry.flush(2000);
+    Sentry.captureException(error, {contexts: {eventData}});
+    await Sentry.flush(2000);
 
-    response.status(502).send(`GuiMail - Gemini call: ${error.message}`);
+    response.status(502).send("Gemini call error");
     return;
   }
 
@@ -119,15 +138,17 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
       location: eventData.location,
     });
     icsString = cal.toString();
+    Sentry.logger.info("Function: iCal created");
   } catch (error) {
-    console.error(error); // TODO: Sentry
-    // await Sentry.flush(2000);
+    Sentry.captureException(error, {contexts: {icsString}});
+    await Sentry.flush(2000);
 
-    response.status(500).send(`GuiMail - iCal creation: ${error.message}`);
+    response.status(500).send("iCal creation error");
     return;
   }
 
   // Create message back
+  let rawReply = "";
   try {
     // Set fields for threading
     const subject = originalSubject.trim().toLowerCase().startsWith("re:") ?
@@ -150,21 +171,24 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
     });
 
     // Generate the message
-    const rawReply = await new Promise((resolve, reject) => {
+    rawReply = await new Promise((resolve, reject) => {
       reply.compile().build((error, message) => {
         if (error) return reject(error);
         return resolve(message.toString());
       });
     });
 
+    Sentry.logger.info("Function: done");
+    await Sentry.flush(2000);
+
     // Reply to message
     response.status(200).send(rawReply);
     return;
   } catch (error) {
-    console.error(error); // TODO: Sentry
-    // await Sentry.flush(2000);
+    Sentry.captureException(error, {contexts: {rawReply}});
+    await Sentry.flush(2000);
 
-    response.status(500).send(`GuiMail - reply creation: ${error.message}`);
+    response.status(500).send("Reply creation error");
     return;
   }
 });
