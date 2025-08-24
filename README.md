@@ -5,23 +5,13 @@
 
 # 📧 GuiMail
 
-An intelligent email processing AI agent that automatically extracts calendar event information from emails and replies with iCal invitations. Forward an email about a meeting, dinner, or any event (in-person or virtual) to GuiMail, and it'll send back a calendar invite you can add with one click.
+An intelligent email processing AI agent that extracts calendar event information from emails and replies with iCal invitations. Forward an email about a meeting, dinner, or any event (in-person or virtual) to GuiMail, and it'll send back a calendar invite you can add with one click/tap.
 
 ### ✨ Features
 
-#### AI-powered event extraction
-- Gemini Pro model through Gemini API integration for accurate event parsing
-- Multi-language support with smart timezone detection
-- Confidence scoring to ensure reliable event extraction
-- Structured JSON output with event details, including physical location or virtual meeting/broadcast link
-
-#### Smart email and calendar integration
-- Automatic iCal invitation generation with proper formatting
-- Email threading support to maintain conversation context
-- Timezone inference based on email language and explicit mentions
-- Handles various date/time formats including relative dates ("tomorrow", "next Friday")
-
-#### Security & reliability
+- Gemini Pro model through Gemini API for event parsing with multilingual support and confidence scoring
+- Smart timezone detection and handling of relative dates ("tomorrow", "next Friday")
+- iCal invitation generation and email threading
 - Email size validation and allowlist-based sender authentication
 - Automatic retry logic with exponential backoff
 - Error handling, tracking, and logging
@@ -45,7 +35,7 @@ The system consists of two main components:
 ### 🛠️ Prerequisites
 - Node.js
 - Firebase CLI
-- Cloudflare account with Email Workers
+- Cloudflare account and Wrangler CLI
 - Gemini API key
 - Sentry DSN key
 
@@ -58,7 +48,7 @@ The system consists of two main components:
 - `axios` and `axios-retry` - API communication with retry logic
 - `cloudflare:email` - email worker runtime
 - `@sentry/cloudflare` and `@sentry/node` - Sentry integration
-- `eslint` and `eslint-stylistic` - code linting
+- `eslint` and `stylistic` - code linting
 - `wrangler` and `firebase-tools` - deployment and management
 
 ---
