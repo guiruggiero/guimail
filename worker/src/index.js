@@ -7,6 +7,7 @@ import {EmailMessage} from "cloudflare:email";
 // Initializations
 const cloudFunctionURL = "https://guimail.guiruggiero.com/";
 const MAX_EMAIL_SIZE = 5 * 1024 * 1024; // 5MB
+let allowedSenders;
 
 // Axios instance
 const axiosInstance = axios.create({
@@ -33,7 +34,6 @@ export default Sentry.withSentry(
     }),
     
     {
-        // eslint-disable-next-line no-unused-vars
         async email(message, env, ctx) {
             Sentry.logger.info("Worker: started");
             
@@ -42,17 +42,19 @@ export default Sentry.withSentry(
             const rawSize = message.rawSize;
 
             // List of allowed senders
-            const allowedSenders = [
-                env.EMAIL_GUI,
-                env.EMAIL_UM,
-                env.EMAIL_GEORGIA,
-                env.EMAIL_PANDA,
-            ].filter(Boolean).map(sender => sender.toLowerCase()); // Forced lowercase
+            if (!allowedSenders) {
+                allowedSenders = new Set([
+                    env.EMAIL_GUI,
+                    env.EMAIL_UM,
+                    env.EMAIL_GEORGIA,
+                    env.EMAIL_PANDA,
+                ].filter(Boolean).map(sender => sender.toLowerCase())); // Forced lowercase
+            }
 
             // Check if sender is allowed
-            if (!allowedSenders.includes(from.toLowerCase())) { // Case-insensitive
+            if (!allowedSenders.has(from.toLowerCase())) { // Case-insensitive
                 Sentry.logger.warn("Worker: sender not allowed", {sender: from});
-                await Sentry.flush(2000);
+                ctx.waitUntil(Sentry.flush(2000));
 
                 message.setReject("You're not a GuiMail user yet! Please, reach out to Gui at https://guiruggiero.com.");
                 return;
@@ -62,7 +64,7 @@ export default Sentry.withSentry(
             // Check for email size
             if (rawSize > MAX_EMAIL_SIZE) {
                 Sentry.logger.warn("Worker: email too large", {size: rawSize});
-                await Sentry.flush(2000);
+                ctx.waitUntil(Sentry.flush(2000));
 
                 message.setReject("This was too large for GuiMail. Delete something (an attachment?) and try again, please.");
                 return;
@@ -102,7 +104,7 @@ export default Sentry.withSentry(
                     references,
                     raw,
                 }});
-                await Sentry.flush(2000);
+                ctx.waitUntil(Sentry.flush(2000));
 
                 message.setReject("Something went wrong. Don't worry, Gui has been notified");
                 return;
@@ -117,7 +119,7 @@ export default Sentry.withSentry(
                 );
 
                 Sentry.logger.info("Worker: done");
-                await Sentry.flush(2000);
+                ctx.waitUntil(Sentry.flush(2000));
 
                 await message.reply(replyMessage);
                 return;
@@ -127,7 +129,7 @@ export default Sentry.withSentry(
                     to: from,
                     reply: response.data,
                 }});
-                await Sentry.flush(2000);
+                ctx.waitUntil(Sentry.flush(2000));
 
                 message.setReject("Something went wrong. Don't worry, Gui has been notified");
                 return;
