@@ -12,7 +12,7 @@
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.33.0",
-		"@stylistic/eslint-plugin-js": "^4.4.1",
+		"@stylistic/eslint-plugin": "^5.2.3",
 		"eslint": "^9.33.0",
 		"globals": "^16.3.0",
 		"wrangler": "^4.30.0"
@@ -21,6 +21,7 @@
 		"whoami": "npx wrangler whoami",
 		"deploy": "npx wrangler deploy",
 		"key": "npx wrangler secret put/delete <KEY>",
-		"update": "npm i -D wrangler@latest"
+		"update": "npm i -D wrangler@latest",
+		"lint": "npx eslint ."
 	}
 }

@@ -1,7 +1,7 @@
 // Imports
 import globals from "globals";
 import js from "@eslint/js";
-import stylisticJs from "@stylistic/eslint-plugin-js";
+import stylisticJs from "@stylistic/eslint-plugin";
 
 /** @type {import("eslint").Linter.Config[]} */
 
