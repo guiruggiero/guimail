@@ -8,11 +8,13 @@ import stylisticJs from "@stylistic/eslint-plugin";
 export default [
   // Base JavaScript configuration
   js.configs.recommended,
+  {
+    ignores: ["eslint.config.js"],
+  },
 
   // Custom JavaScript configuration
   {
     files: ["**/*.js"],
-    ignores: ["eslint.config.js"],
     plugins: {
       js,
       "@stylistic/js": stylisticJs,
