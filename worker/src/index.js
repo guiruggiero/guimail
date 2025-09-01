@@ -12,7 +12,7 @@ let allowedSenders;
 // Axios instance
 const axiosInstance = axios.create({
     baseURL: cloudFunctionURL,
-    timeout: 32000, // 32s
+    timeout: 62000, // 32s
 });
 
 // Retry configuration
@@ -53,17 +53,17 @@ export default Sentry.withSentry(
 
             // Check if sender is allowed
             if (!allowedSenders.has(from.toLowerCase())) { // Case-insensitive
-                Sentry.logger.warn("Worker: sender not allowed", {sender: from});
+                Sentry.logger.warn("Worker: sender not allowed", {from});
                 ctx.waitUntil(Sentry.flush(2000));
 
                 message.setReject("You're not a GuiMail user yet! Please, reach out to Gui at https://guiruggiero.com.");
                 return;
             }
-            Sentry.logger.info("Worker: message from", {sender: from});
+            Sentry.logger.info("Worker: message from", {from});
 
             // Check for email size
             if (rawSize > MAX_EMAIL_SIZE) {
-                Sentry.logger.warn("Worker: email too large", {size: rawSize});
+                Sentry.logger.warn("Worker: email too large", {rawSize});
                 ctx.waitUntil(Sentry.flush(2000));
 
                 message.setReject("This was too large for GuiMail. Delete something (an attachment?) and try again, please.");
@@ -71,7 +71,7 @@ export default Sentry.withSentry(
             }
 
             // Extract other message data
-            const raw = message.raw;
+            const rawBody = await new Response(message.raw).arrayBuffer();
             const subject = message.headers.get("Subject");
             const messageID = message.headers.get("Message-ID");
             const references = message.headers.get("References");
@@ -80,7 +80,7 @@ export default Sentry.withSentry(
             // Call GuiMail
             let response;
             try {
-                response = await axiosInstance.post("", raw, {
+                response = await axiosInstance.post("", rawBody, {
                     headers: {
                         "Authorization": `Bearer ${env.WORKER_SECRET}`,
                         "Content-Type": "application/octet-stream",
@@ -98,11 +98,9 @@ export default Sentry.withSentry(
 
                 // Other errors
                 else Sentry.captureException(error, {contexts: {
-                    from,
-                    subject,
-                    messageID,
-                    references,
-                    raw,
+                    from: from,
+                    subject: subject,
+                    messageID: messageID,
                 }});
                 ctx.waitUntil(Sentry.flush(2000));
 

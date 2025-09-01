@@ -14,7 +14,6 @@ Sentry.init({
   enableLogs: true,
 });
 const ai = new GoogleGenAI({apiKey: process.env.GEMINI_API_KEY});
-const parser = new PostalMime();
 
 // Model configuration
 const instructions = fs.readFileSync("prompt.txt", "utf8");
@@ -58,7 +57,7 @@ const modelConfig = {
 const functionConfig = {
   cors: true,
   maxInstances: 2,
-  timeoutSeconds: 30,
+  timeoutSeconds: 60,
 };
 
 exports.guimail = onRequest(functionConfig, async (request, response) => {
@@ -68,8 +67,10 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
   const authHeader = request.headers.authorization;
   const expectedToken = `Bearer ${process.env.WORKER_SECRET}`;
   if (authHeader !== expectedToken) {
-    Sentry.captureException(new Error("Request not authenticated"),
-        {contexts: {authHeader}});
+    Sentry.logger.warn("Request not authenticated", {
+      authHeader: authHeader,
+      requestQuery: request.query,
+    });
     await Sentry.flush(2000);
 
     response.status(401).send("Request not authenticated");
@@ -85,18 +86,17 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
   let messageBody = "";
   try {
     // Parse the message stream
+    const parser = new PostalMime();
     body = await parser.parse(raw);
 
     // Use text body if it exists, otherwise the HTML body
     messageBody = body.text || body.html;
     if (!messageBody) throw new Error("Message has no text or HTML body");
-    Sentry.logger.info("Function: message body", {messageBody});
+    Sentry.logger.info("Function: message body", {
+      messageBody: messageBody.substring(0, 1000),
+    });
   } catch (error) {
-    Sentry.captureException(error, {contexts: {
-      rawBody: raw,
-      body,
-      messageBody,
-    }});
+    Sentry.captureException(error, {contexts: {body}});
     await Sentry.flush(2000);
 
     response.status(400).send("Body extraction error");
@@ -138,9 +138,11 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
       location: eventData.location,
     });
     icsString = cal.toString();
-    Sentry.logger.info("Function: iCal created");
+    Sentry.logger.info("Function: iCal created", {
+      icsString: icsString.substring(0, 500),
+    });
   } catch (error) {
-    Sentry.captureException(error, {contexts: {icsString}});
+    Sentry.captureException(error, {contexts: {icsString: icsString}});
     await Sentry.flush(2000);
 
     response.status(500).send("iCal creation error");
@@ -185,7 +187,7 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
     response.status(200).send(rawReply);
     return;
   } catch (error) {
-    Sentry.captureException(error, {contexts: {rawReply}});
+    Sentry.captureException(error, {contexts: {rawReply: rawReply}});
     await Sentry.flush(2000);
 
     response.status(500).send("Reply creation error");
