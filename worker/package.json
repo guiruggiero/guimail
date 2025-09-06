@@ -6,16 +6,16 @@
 	"type": "module",
 	"main": "src/index.js",
 	"dependencies": {
-		"@sentry/cloudflare": "^10.8.0",
+		"@sentry/cloudflare": "^10.10.0",
 		"axios": "^1.11.0",
 		"axios-retry": "^4.5.0"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.33.0",
 		"@stylistic/eslint-plugin": "^5.2.3",
-		"eslint": "^9.33.0",
+		"eslint": "^9.35.0",
 		"globals": "^16.3.0",
-		"wrangler": "^4.33.1"
+		"wrangler": "^4.34.0"
 	},
 	"scripts": {
 		"whoami": "npx wrangler whoami",
