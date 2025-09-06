@@ -12,7 +12,7 @@ let allowedSenders;
 // Axios instance
 const axiosInstance = axios.create({
     baseURL: cloudFunctionURL,
-    timeout: 62000, // 32s
+    timeout: 62000, // 62s
 });
 
 // Retry configuration
