@@ -5,7 +5,7 @@ import axiosRetry from "axios-retry";
 import {EmailMessage} from "cloudflare:email";
 
 // Initializations
-const cloudFunctionURL = "https://guimail.guiruggiero.com/";
+const cloudFunctionURL = "https://us-central1-guiruggiero.cloudfunctions.net/guimail";
 const MAX_EMAIL_SIZE = 5 * 1024 * 1024; // 5MB
 let allowedSenders;
 
