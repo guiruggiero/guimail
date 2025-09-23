@@ -17,6 +17,30 @@ const ai = new GoogleGenAI({apiKey: process.env.GEMINI_API_KEY});
 
 // Model configuration
 const instructions = fs.readFileSync("prompt.txt", "utf8");
+const responseSchema = {
+  type: "object",
+  properties: {
+    summary: {type: "string"},
+    start: {
+      type: "object",
+      properties: {
+        dateTime: {type: "string"}, // ISO format
+        timeZone: {type: "string"},
+      },
+    },
+    end: {
+      type: "object",
+      properties: {
+        dateTime: {type: "string"}, // ISO format
+        timeZone: {type: "string"},
+      },
+    },
+    location: {type: "string"},
+    description: {type: "string"},
+    confidence: {type: "number"}, // 0-1 score
+  },
+  required: ["summary", "start", "end", "confidence"],
+};
 const modelConfig = {
   model: "gemini-2.5-pro",
   config: {
@@ -26,30 +50,7 @@ const modelConfig = {
       thinkingbudget: 0,
     },
     responseMimeType: "application/json", // Structured output
-    responseSchema: {
-      type: "object",
-      properties: {
-        summary: {type: "string"},
-        start: {
-          type: "object",
-          properties: {
-            dateTime: {type: "string"}, // ISO format
-            timeZone: {type: "string"},
-          },
-        },
-        end: {
-          type: "object",
-          properties: {
-            dateTime: {type: "string"}, // ISO format
-            timeZone: {type: "string"},
-          },
-        },
-        location: {type: "string"},
-        description: {type: "string"},
-        confidence: {type: "number"}, // 0-1 score
-      },
-      required: ["summary", "start", "end", "confidence"],
-    },
+    responseSchema: responseSchema,
   },
 };
 
