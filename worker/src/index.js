@@ -1,7 +1,7 @@
 // Imports
-import * as Sentry from "@sentry/cloudflare";
 import axios from "axios";
 import axiosRetry from "axios-retry";
+import * as Sentry from "@sentry/cloudflare";
 import {EmailMessage} from "cloudflare:email";
 
 // Initializations
@@ -36,10 +36,6 @@ export default Sentry.withSentry(
     {
         async email(message, env, ctx) {
             Sentry.logger.info("Worker: started");
-            
-            // Extract essential message data
-            const from = message.from;
-            const rawSize = message.rawSize;
 
             // List of allowed senders
             if (!allowedSenders) {
@@ -52,6 +48,7 @@ export default Sentry.withSentry(
             }
 
             // Check if sender is allowed
+            const from = message.from;
             if (!allowedSenders.has(from.toLowerCase())) { // Case-insensitive
                 Sentry.logger.warn("Worker: sender not allowed", {from});
                 ctx.waitUntil(Sentry.flush(2000));
@@ -62,6 +59,7 @@ export default Sentry.withSentry(
             Sentry.logger.info("Worker: message from", {from});
 
             // Check for email size
+            const rawSize = message.rawSize;
             if (rawSize > MAX_EMAIL_SIZE) {
                 Sentry.logger.warn("Worker: email too large", {rawSize});
                 ctx.waitUntil(Sentry.flush(2000));

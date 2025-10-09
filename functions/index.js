@@ -1,7 +1,7 @@
 // Imports
 const Sentry = require("@sentry/node");
-const fs = require("fs");
 const {GoogleGenAI} = require("@google/genai");
+const fs = require("fs");
 const {onRequest} = require("firebase-functions/v2/https");
 const {default: PostalMime} = require("postal-mime");
 const {default: ical} = require("ical-generator");
