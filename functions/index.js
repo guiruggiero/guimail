@@ -1,6 +1,6 @@
 // Imports
 const Sentry = require("@sentry/node");
-const {GoogleGenAI} = require("@google/genai");
+const {GoogleGenAI, Type, FunctionCallingConfigMode} = require("@google/genai");
 const fs = require("fs");
 const {onRequest} = require("firebase-functions/v2/https");
 const {default: PostalMime} = require("postal-mime");
@@ -14,33 +14,55 @@ Sentry.init({
   enableLogs: true,
 });
 const ai = new GoogleGenAI({apiKey: process.env.GEMINI_API_KEY});
+const instructions = fs.readFileSync("prompt.txt", "utf8");
+
+// Model tool
+const createCalendarEvent = {
+  name: "create_calendar_event",
+  description: "Creates a calendar event with details extracted from the" +
+    " email message including title and time, location, and description",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      summary: {
+        type: Type.STRING,
+        description: "Event title/name",
+      },
+      start: {
+        type: Type.STRING,
+        description: "Event start date and time in" +
+          " ISO-8601 format (YYYY-MM-DDTHH:MM:SS)",
+      },
+      end: {
+        type: Type.STRING,
+        description: "Event end date and time in" +
+          " ISO-8601 format (YYYY-MM-DDTHH:MM:SS)",
+      },
+      timeZone: {
+        type: Type.STRING,
+        description: "Event time zone in" +
+          " IANA identifier (e.g., 'America/Los_Angeles')",
+      },
+      location: {
+        type: Type.STRING,
+        description: "Event location, be it physical or virtual",
+      },
+      description: {
+        type: Type.STRING,
+        description: "Additional details of the event," +
+          " followed by the email subject line",
+      },
+      confidence: {
+        type: Type.NUMBER,
+        description: "Confidence score between 0 and 1 indicating" +
+          " certainty of the data extraction (e.g., '0.85')",
+      },
+    },
+    required: ["summary", "start", "end", "timeZone", "confidence"],
+  },
+};
 
 // Model configuration
-const instructions = fs.readFileSync("prompt.txt", "utf8");
-const responseSchema = {
-  type: "object",
-  properties: {
-    summary: {type: "string"},
-    start: {
-      type: "object",
-      properties: {
-        dateTime: {type: "string"}, // ISO format
-        timeZone: {type: "string"},
-      },
-    },
-    end: {
-      type: "object",
-      properties: {
-        dateTime: {type: "string"}, // ISO format
-        timeZone: {type: "string"},
-      },
-    },
-    location: {type: "string"},
-    description: {type: "string"},
-    confidence: {type: "number"}, // 0-1 score
-  },
-  required: ["summary", "start", "end", "confidence"],
-};
 const modelConfig = {
   model: "gemini-2.5-pro",
   config: {
@@ -49,12 +71,18 @@ const modelConfig = {
     thinkingconfig: {
       thinkingbudget: 0,
     },
-    responseMimeType: "application/json", // Structured output
-    responseSchema: responseSchema,
+    tools: [{
+      functionDeclarations: [createCalendarEvent],
+    }],
+    toolConfig: {
+      functionCallingConfig: {
+        mode: FunctionCallingConfigMode.ANY,
+      },
+    },
   },
 };
 
-// Function configuration
+// Firebase function configuration
 const functionConfig = {
   cors: true,
   maxInstances: 2,
@@ -109,9 +137,20 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
   try {
     const result = await ai.models.generateContent({
       ...modelConfig,
-      contents: messageBody,
+      contents: [{role: "user", parts: [{text: messageBody}]}],
     });
-    eventData = JSON.parse(result.text);
+
+    // Validate tool call
+    if (!result.functionCalls || result.functionCalls.length === 0) {
+      throw new Error("Model did not return a function call");
+    }
+    const toolCall = result.functionCalls[0];
+    if (toolCall.name !== "create_calendar_event") {
+      throw new Error(`Unexpected function call: ${toolCall.name}`);
+    }
+
+    // Extract the event data from tool call
+    eventData = toolCall.args;
     Sentry.logger.info("Function: event title", {title: eventData.summary});
 
     // Validate confidence threshold
@@ -129,11 +168,14 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
   // Create iCal invite
   let icsString = "";
   try {
-    const cal = ical({name: "GuiMail events"});
+    const cal = ical({
+      name: "GuiMail",
+      prodId: "//GuiRuggiero//GuiMail//EN",
+    });
     cal.createEvent({
-      start: new Date(eventData.start.dateTime),
-      end: new Date(eventData.end.dateTime),
-      timezone: eventData.start.timeZone,
+      start: new Date(eventData.start),
+      end: new Date(eventData.end),
+      timezone: eventData.timeZone,
       summary: eventData.summary,
       description: eventData.description,
       location: eventData.location,
