@@ -188,7 +188,7 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
     Sentry.captureException(error, {contexts: {icsString: icsString}});
     await Sentry.flush(2000);
 
-    response.status(500).send("iCal creation error");
+    response.status(400).send("iCal creation error");
     return;
   }
 
@@ -233,7 +233,7 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
     Sentry.captureException(error, {contexts: {rawReply: rawReply}});
     await Sentry.flush(2000);
 
-    response.status(500).send("Reply creation error");
+    response.status(400).send("Reply creation error");
     return;
   }
 });
