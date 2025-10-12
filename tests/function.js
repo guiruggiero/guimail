@@ -3,8 +3,8 @@
 import {GEMINI_API_KEY, EMAIL_GUIMAIL} from "../../../secrets/guimail.mjs";
 // const {GoogleGenAI, Type, FunctionCallingConfigMode} = require("@google/genai");
 import {GoogleGenAI, Type, FunctionCallingConfigMode} from "@google/genai";
-// const fs = require("fs");
-import fs from "fs";
+// const fs = require("node:fs");
+import fs from "node:fs";
 // const {onRequest} = require("firebase-functions/v2/https");
 // const {default: PostalMime} = require("postal-mime");
 // const {default: ical} = require("ical-generator");
