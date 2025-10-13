@@ -16,7 +16,7 @@ Sentry.init({
 const ai = new GoogleGenAI({apiKey: process.env.GEMINI_API_KEY});
 const instructions = fs.readFileSync("prompt.txt", "utf8");
 
-// Model tool
+// Model tools
 const createCalendarEvent = {
   name: "create_calendar_event",
   description: "Creates a calendar event with details extracted from the" +
@@ -61,6 +61,22 @@ const createCalendarEvent = {
     required: ["summary", "start", "end", "timeZone", "confidence"],
   },
 };
+const summarizeEmail = {
+  name: "summarize_email",
+  description: "Creates a concise summary of the email content" +
+    "in a single paragraph",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      summary: {
+        type: Type.STRING,
+        description: "A concise paragraph summarizing the key points" +
+          "or action items from the email",
+      },
+    },
+    required: ["summary"],
+  },
+};
 
 // Model configuration
 const modelConfig = {
@@ -72,13 +88,69 @@ const modelConfig = {
       thinkingbudget: 0,
     },
     tools: [{
-      functionDeclarations: [createCalendarEvent],
+      functionDeclarations: [
+        createCalendarEvent,
+        summarizeEmail,
+      ],
     }],
     toolConfig: {
       functionCallingConfig: {
         mode: FunctionCallingConfigMode.ANY,
       },
     },
+  },
+};
+
+// Tool handlers
+const toolHandlers = {
+  create_calendar_event: async (args) => {
+    Sentry.logger.info("Function: tool create_calendar_event",
+        {title: args.summary});
+
+    // Validate confidence threshold
+    if (args.confidence < 0.5) {
+      throw new Error(`Low confidence: ${args.confidence}`);
+    }
+
+    // Create iCal invite
+    const cal = ical({
+      name: "GuiMail",
+      prodId: "//GuiRuggiero//GuiMail//EN",
+    });
+    cal.createEvent({
+      start: new Date(args.start),
+      end: new Date(args.end),
+      timezone: args.timeZone,
+      summary: args.summary,
+      description: args.description,
+      location: args.location,
+    });
+    const icsString = cal.toString();
+    Sentry.logger.info("Function: iCal created", {
+      icsString: icsString.substring(0, 500),
+    });
+
+    return {
+      type: "calendar_event",
+      text: `Event created. Confidence = ${args.confidence}.`,
+      icalEvent: {
+        method: "REQUEST",
+        content: icsString,
+      },
+    };
+  },
+
+  summarize_email: async (args) => {
+    Sentry.logger.info("Function: tool summarize_email",
+        {summaryLength: args.summary.length});
+
+    // Build response text
+    const responseText = `Email summary:\n\n${args.summary}`;
+
+    return {
+      type: "summary",
+      text: responseText,
+    };
   },
 };
 
@@ -133,62 +205,41 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
   }
 
   // Call Gemini
-  let eventData = {};
+  let result;
+  let toolCall = {};
+  let handler;
   try {
-    const result = await ai.models.generateContent({
+    result = await ai.models.generateContent({
       ...modelConfig,
       contents: [{role: "user", parts: [{text: messageBody}]}],
     });
 
     // Validate tool call
     if (!result.functionCalls || result.functionCalls.length === 0) {
-      throw new Error("Model did not return a function call");
+      throw new Error("No tool call returned");
     }
-    const toolCall = result.functionCalls[0];
-    if (toolCall.name !== "create_calendar_event") {
-      throw new Error(`Unexpected function call: ${toolCall.name}`);
-    }
-
-    // Extract the event data from tool call
-    eventData = toolCall.args;
-    Sentry.logger.info("Function: event title", {title: eventData.summary});
-
-    // Validate confidence threshold
-    if (eventData.confidence < 0.5) {
-      throw new Error(`Low confidence: ${eventData.confidence}`);
+    toolCall = result.functionCalls[0];
+    handler = toolHandlers[toolCall.name];
+    if (!handler) {
+      throw new Error(`Unknown tool returned: ${toolCall.name}`);
     }
   } catch (error) {
-    Sentry.captureException(error, {contexts: {eventData}});
+    Sentry.captureException(error, {contexts: {result}});
     await Sentry.flush(2000);
 
     response.status(502).send("Gemini call error");
     return;
   }
 
-  // Create iCal invite
-  let icsString = "";
+  // Execute appropriate tool handler
+  let toolResult = {};
   try {
-    const cal = ical({
-      name: "GuiMail",
-      prodId: "//GuiRuggiero//GuiMail//EN",
-    });
-    cal.createEvent({
-      start: new Date(eventData.start),
-      end: new Date(eventData.end),
-      timezone: eventData.timeZone,
-      summary: eventData.summary,
-      description: eventData.description,
-      location: eventData.location,
-    });
-    icsString = cal.toString();
-    Sentry.logger.info("Function: iCal created", {
-      icsString: icsString.substring(0, 500),
-    });
+    toolResult = await handler(toolCall.args);
   } catch (error) {
-    Sentry.captureException(error, {contexts: {icsString: icsString}});
+    Sentry.captureException(error, {contexts: {toolCall}});
     await Sentry.flush(2000);
 
-    response.status(400).send("iCal creation error");
+    response.status(400).send("Tool handler error");
     return;
   }
 
@@ -200,22 +251,23 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
       originalSubject : `Re: ${originalSubject}`; // Add "Re:" prefix
     const newReferences = [references, messageID].filter(Boolean).join(" ");
 
-    // Construct message object
-    const reply = new MailComposer({
+    // Base message configuration
+    const replyConfig = {
       from: `"GuiMail" <${process.env.EMAIL_GUIMAIL}>`,
       to: from,
       subject,
       inReplyTo: messageID,
       references: newReferences,
-      text: `Event created. Confidence = ${eventData.confidence}.\n\n` +
-        "Thank you for using GuiMail!",
-      icalEvent: {
-        method: "REQUEST",
-        content: icsString,
-      },
-    });
+      text: `${toolResult.text}\n\nThank you for using GuiMail!`,
+    };
 
-    // Generate the message
+    // Add iCal if this was a calendar event
+    if (toolResult.icalEvent) {
+      replyConfig.icalEvent = toolResult.icalEvent;
+    }
+
+    // Construct message
+    const reply = new MailComposer(replyConfig);
     rawReply = await new Promise((resolve, reject) => {
       reply.compile().build((error, message) => {
         if (error) return reject(error);
@@ -223,14 +275,14 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
       });
     });
 
-    Sentry.logger.info("Function: done");
+    Sentry.logger.info("Function: done", {toolType: toolResult.type});
     await Sentry.flush(2000);
 
     // Reply to message
     response.status(200).send(rawReply);
     return;
   } catch (error) {
-    Sentry.captureException(error, {contexts: {rawReply: rawReply}});
+    Sentry.captureException(error, {contexts: {toolResult}});
     await Sentry.flush(2000);
 
     response.status(400).send("Reply creation error");
