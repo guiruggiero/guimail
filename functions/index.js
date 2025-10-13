@@ -5,6 +5,8 @@ const fs = require("node:fs");
 const {onRequest} = require("firebase-functions/v2/https");
 const {default: PostalMime} = require("postal-mime");
 const {default: ical} = require("ical-generator");
+const {google} = require("googleapis");
+const path = require("node:path");
 const MailComposer = require("nodemailer/lib/mail-composer");
 
 // Initializations
@@ -77,6 +79,32 @@ const summarizeEmail = {
     required: ["summary"],
   },
 };
+const addToBudget = {
+  name: "add_to_budget",
+  description: "Adds a credit card statement balance to the budget" +
+    " spreadsheet",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      issuer: {
+        type: Type.STRING,
+        enum: ["Chase", "Capital One", "Amex", "TF Bank", "Discover"],
+        description: "Credit card issuer name",
+      },
+      balance: {
+        type: Type.NUMBER,
+        description: "Credit card statement balance without currency sign" +
+          " (e.g., 127.43)",
+      },
+      confidence: {
+        type: Type.NUMBER,
+        description: "Confidence score between 0 and 1 indicating" +
+          " certainty of the data extraction (e.g., '0.85')",
+      },
+    },
+    required: ["issuer", "balance", "confidence"],
+  },
+};
 
 // Model configuration
 const modelConfig = {
@@ -91,6 +119,7 @@ const modelConfig = {
       functionDeclarations: [
         createCalendarEvent,
         summarizeEmail,
+        addToBudget,
       ],
     }],
     toolConfig: {
@@ -144,11 +173,60 @@ const toolHandlers = {
     Sentry.logger.info("Function: tool summarize_email",
         {summaryLength: args.summary.length});
 
-    // Build response text
-    const responseText = `Email summary:\n\n${args.summary}`;
-
     return {
       type: "summary",
+      text: `Email summary:\n\n${args.summary}`,
+    };
+  },
+
+  add_to_budget: async (args) => {
+    Sentry.logger.info("Function: tool add_to_budget", {issuer: args.issuer});
+
+    // Validate confidence threshold
+    if (args.confidence < 0.5) {
+      throw new Error(`Low confidence: ${args.confidence}`);
+    }
+
+    // Create authenticated Google Sheets client
+    const auth = new google.auth.GoogleAuth({
+      keyFile: path.join(__dirname, "service-account-key.json"),
+      scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+    });
+    const sheets = google.sheets({version: "v4", auth});
+
+    // Mapping of issuers and row numbers
+    const issuerToRow = {
+      "Chase": "2",
+      "Capital One": "3",
+      "Amex": "4",
+      "TF Bank": "5",
+      "Discover": "6",
+    };
+
+    // Update multiple cells at once
+    await sheets.spreadsheets.values.batchUpdate({
+      spreadsheetId: process.env.GOOGLE_SHEET_ID,
+      resource: {
+        valueInputOption: "USER_ENTERED", // Data interpreted as if user typed
+        data: [
+          {
+            range: `Y${issuerToRow[args.issuer]}`,
+            values: [[args.balance]], // Must be in a 2D array
+          },
+          {
+            range: `Z${issuerToRow[args.issuer]}`,
+            values: [[new Date().toLocaleString("en-US", {timeZone: "CET"})]],
+          },
+        ],
+      },
+    });
+
+    // Build response text
+    const responseText = `${args.issuer} balance ${args.balance} added` +
+      ` to budget.\nConfidence = ${args.confidence * 100}%.`;
+
+    return {
+      type: "budget_update",
       text: responseText,
     };
   },

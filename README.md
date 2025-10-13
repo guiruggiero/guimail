@@ -9,14 +9,16 @@ An intelligent multi-purpose email processing AI agent. Forward any email to Gui
 
 - 📅 **Extract calendar events** - Get iCal invitations for meetings, appointments, or any event (in-person or virtual) and add to your calendar with one tap/click
 - 📝 **Summarize content** - Receive concise summaries of long emails, newsletters, and threads
+- 💰 **Track expenses** - Automatically add credit card statement balances to a budget spreadsheet
 
-Simply forward an email, and GuiMail intelligently chooses the right action based on the content.
+Simply forward an email, and GuiMail intelligently chooses the right action based on the content. No manual configuration needed.
 
 ### ✨ Features
 
 - **Calendar event extraction** with smart timezone detection, handling of relative dates ("tomorrow", "next Friday"), and confidence scoring
 - **iCal invitation** generation with proper **email threading**
 - **Email summarization** for quick insights from lengthy content
+- **Budget tracking** with Google Sheets
 - **Multi-tool AI agent** using Gemini Pro model through the Gemini API with **extensible architecture** for easy addition of new features
 - Allowlist-based **sender authentication** and **email size validation**
 - **Automatic retry logic** with exponential backoff
@@ -34,8 +36,10 @@ The system consists of two main components:
 
 #### Firebase Cloud Function (`functions/`)
 - Processes email content using Gemini API with tool calling
-- Extracts structured event data with confidence scoring
+- Automatically chooses tool for calendar event, summarization, or budget tracking
+- Extracts structured data with validation and confidence scoring
 - Generates iCal invitations using industry-standard formatting
+- Updates Google Sheets via API
 - Composes and sends reply emails with proper threading
 
 ### 🛠️ Prerequisites
@@ -56,6 +60,7 @@ The system consists of two main components:
 - `@sentry/cloudflare` and `@sentry/node` - error tracking and monitoring
 - `eslint` and `stylistic` - code linting
 - `wrangler` and `firebase-tools` - deployment and management
+- `googleapis` - Google Sheets API integration
 
 ---
 

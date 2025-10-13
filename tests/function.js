@@ -1,6 +1,6 @@
 // Imports
 // const Sentry = require("@sentry/node");
-import {GEMINI_API_KEY, EMAIL_GUIMAIL} from "../../../secrets/guimail.mjs";
+import {GEMINI_API_KEY, EMAIL_GUIMAIL} from "../../secrets/guimail.mjs";
 // const {GoogleGenAI, Type, FunctionCallingConfigMode} = require("@google/genai");
 import {GoogleGenAI, Type, FunctionCallingConfigMode} from "@google/genai";
 // const fs = require("node:fs");
