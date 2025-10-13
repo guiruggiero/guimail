@@ -12,7 +12,7 @@ let allowedSenders;
 // Axios instance
 const axiosInstance = axios.create({
     baseURL: cloudFunctionURL,
-    timeout: 62000, // 62s
+    timeout: 90000, // 1m30s
 });
 
 // Retry configuration
@@ -22,7 +22,7 @@ axiosRetry(axiosInstance, {
     // Only retry on network or 5xx errors
     retryCondition: (error) => {
         return axiosRetry.isNetworkOrIdempotentRequestError(error) ||
-               (error.response && error.response.status >= 500);
+            (error.response && error.response.status >= 500);
     },
 });
 
@@ -42,8 +42,8 @@ export default Sentry.withSentry(
                 allowedSenders = new Set([
                     env.EMAIL_GUI,
                     env.EMAIL_UM,
-                    env.EMAIL_GEORGIA,
-                    env.EMAIL_PANDA,
+                    // env.EMAIL_GEORGIA,
+                    // env.EMAIL_PANDA,
                 ].filter(Boolean).map(sender => sender.toLowerCase())); // Forced lowercase
             }
 

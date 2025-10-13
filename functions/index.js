@@ -7,6 +7,8 @@ const {default: PostalMime} = require("postal-mime");
 const {default: ical} = require("ical-generator");
 const {google} = require("googleapis");
 const path = require("node:path");
+const axios = require("axios");
+const axiosRetry = require("axios-retry");
 const MailComposer = require("nodemailer/lib/mail-composer");
 
 // Initializations
@@ -222,8 +224,45 @@ const toolHandlers = {
     });
 
     // Build response text
-    const responseText = `${args.issuer} balance ${args.balance} added` +
+    let responseText = `${args.issuer} balance ${args.balance} added` +
       ` to budget.\nConfidence = ${args.confidence * 100}%.`;
+
+    // Add to Splitwise
+    if (args.issuer === "Capital One") {
+      // Axios instance
+      const axiosInstance = axios.create({
+        baseURL: "https://secure.splitwise.com/api/v3.0",
+        headers: {"Authorization": `Bearer ${process.env.SPLITWISE_API_KEY}`},
+      });
+
+      // Retry configuration
+      axiosRetry(axiosInstance, {
+        retries: 2, // Retry attempts
+        retryDelay: axiosRetry.exponentialDelay, // 1s then 2s between retries
+        // Only retry on network or 5xx errors
+        retryCondition: (error) => {
+          return axiosRetry.isNetworkOrIdempotentRequestError(error) ||
+            (error.response && error.response.status >= 500);
+        },
+      });
+
+      // Add expense on Splitwise
+      await axiosInstance.post("/create_expense", {
+        cost: args.balance,
+        description: "Capital One",
+        details: "Created via GuiMail",
+        currency_code: "USD",
+        group_id: 0, // Direct expense between users
+        users__0__user_id: process.env.SPLITWISE_GUI_ID,
+        users__0__paid_share: args.balance,
+        users__0__owed_share: args.balance/2,
+        users__1__user_id: process.env.SPLITWISE_GEORGIA_ID,
+        users__1__paid_share: "0",
+        users__1__owed_share: args.balance/2,
+      });
+
+      responseText += "\n\nExpense also added on Splitwise.";
+    }
 
     return {
       type: "budget_update",
