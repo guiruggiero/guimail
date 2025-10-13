@@ -64,14 +64,14 @@ const createCalendarEvent = {
 const summarizeEmail = {
   name: "summarize_email",
   description: "Creates a concise summary of the email content" +
-    "in a single paragraph",
+    " in a single paragraph",
   parameters: {
     type: Type.OBJECT,
     properties: {
       summary: {
         type: Type.STRING,
         description: "A concise paragraph summarizing the key points" +
-          "or action items from the email",
+          " or action items from the email",
       },
     },
     required: ["summary"],
@@ -132,7 +132,7 @@ const toolHandlers = {
 
     return {
       type: "calendar_event",
-      text: `Event created. Confidence = ${args.confidence}.`,
+      text: `Event created. Confidence = ${args.confidence * 100}%.`,
       icalEvent: {
         method: "REQUEST",
         content: icsString,
@@ -236,7 +236,10 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
   try {
     toolResult = await handler(toolCall.args);
   } catch (error) {
-    Sentry.captureException(error, {contexts: {toolCall}});
+    Sentry.captureException(error, {contexts: {
+      toolCall,
+      partialResult: toolResult,
+    }});
     await Sentry.flush(2000);
 
     response.status(400).send("Tool handler error");

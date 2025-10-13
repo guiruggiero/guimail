@@ -5,32 +5,38 @@
 
 # 📧 GuiMail
 
-An intelligent email processing AI agent that extracts calendar event information from emails and replies with iCal invitations. Forward an email about a meeting, dinner, or any event (in-person or virtual) to GuiMail, and it'll send back a calendar invite you can add with one click/tap.
+An intelligent multi-purpose email processing AI agent. Forward any email to GuiMail and it will automatically:
+
+- 📅 **Extract calendar events** - Get iCal invitations for meetings, appointments, or any event (in-person or virtual) and add to your calendar with one tap/click
+- 📝 **Summarize content** - Receive concise summaries of long emails, newsletters, and threads
+
+Simply forward an email, and GuiMail intelligently chooses the right action based on the content.
 
 ### ✨ Features
 
-- Gemini Pro model through Gemini API for event parsing with multilingual support and confidence scoring
-- Smart timezone detection and handling of relative dates ("tomorrow", "next Friday")
-- iCal invitation generation and email threading
-- Email size validation and allowlist-based sender authentication
-- Automatic retry logic with exponential backoff
-- Error handling, tracking, and logging
+- **Calendar event extraction** with smart timezone detection, handling of relative dates ("tomorrow", "next Friday"), and confidence scoring
+- **iCal invitation** generation with proper **email threading**
+- **Email summarization** for quick insights from lengthy content
+- **Multi-tool AI agent** using Gemini Pro model through the Gemini API with **extensible architecture** for easy addition of new features
+- Allowlist-based **sender authentication** and **email size validation**
+- **Automatic retry logic** with exponential backoff
+- **Error tracking** and logging
 
 ### 🏗️ Architecture
 
 The system consists of two main components:
 
 #### Cloudflare Email Worker (`worker/`)
-- Receives incoming emails
+- Receives incoming emails via Cloudflare Email Routing
 - Enforces sender allowlist and size limits
 - Forwards processed emails to Firebase Cloud Function
 - Handles email replies back to the original sender
 
 #### Firebase Cloud Function (`functions/`)
-- Processes email content using Gemini API
+- Processes email content using Gemini API with tool calling
 - Extracts structured event data with confidence scoring
 - Generates iCal invitations using industry-standard formatting
-- Composes and sends reply emails with calendar attachments
+- Composes and sends reply emails with proper threading
 
 ### 🛠️ Prerequisites
 - Node.js
@@ -40,14 +46,14 @@ The system consists of two main components:
 - Sentry DSN key
 
 ### 📦 Dependencies
-- `@google/genai` - Gemini API integration
+- `@google/genai` - Gemini API SDK
 - `postal-mime` - email parsing and content extraction
 - `ical-generator` - iCal invitation creation
 - `nodemailer` - email composition
 - `firebase-functions` - serverless backend
 - `axios` and `axios-retry` - API communication with retry logic
 - `cloudflare:email` - email worker runtime
-- `@sentry/cloudflare` and `@sentry/node` - Sentry integration
+- `@sentry/cloudflare` and `@sentry/node` - error tracking and monitoring
 - `eslint` and `stylistic` - code linting
 - `wrangler` and `firebase-tools` - deployment and management
 
