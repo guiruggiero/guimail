@@ -35,12 +35,13 @@ export default Sentry.withSentry(
     
     {
         async email(message, env, ctx) {
-            Sentry.logger.info("Worker: started");
+            Sentry.logger.info("[1] Worker: started");
 
             // List of allowed senders
             if (!allowedSenders) {
                 allowedSenders = new Set([
                     env.EMAIL_GUI,
+                    env.EMAIL_GUI_AUTO_FWD,
                     env.EMAIL_UM,
                     // env.EMAIL_GEORGIA,
                     // env.EMAIL_PANDA,
@@ -56,7 +57,7 @@ export default Sentry.withSentry(
                 message.setReject("You're not a GuiMail user yet! Please, reach out to Gui at https://guiruggiero.com.");
                 return;
             }
-            Sentry.logger.info("Worker: message from", {from});
+            Sentry.logger.info("[2] Worker: message from", {from});
 
             // Check for email size
             const rawSize = message.rawSize;
@@ -73,7 +74,7 @@ export default Sentry.withSentry(
             const subject = message.headers.get("Subject");
             const messageID = message.headers.get("Message-ID");
             const references = message.headers.get("References");
-            Sentry.logger.info("Worker: message subject", {subject});
+            Sentry.logger.info("[3] Worker: message subject", {subject});
 
             // Call GuiMail
             let response;
@@ -85,7 +86,7 @@ export default Sentry.withSentry(
                     },
                     params: {from, subject, messageID, references},
                 });
-                Sentry.logger.info("Worker: GuiMail call successful");
+                Sentry.logger.info("[9] Worker: function call successful");
 
             } catch (error) {
                 // GuiMail responded with status 4xx or 5xx
@@ -114,7 +115,7 @@ export default Sentry.withSentry(
                     response.data,
                 );
 
-                Sentry.logger.info("Worker: done");
+                Sentry.logger.info("[10] Worker: done");
                 ctx.waitUntil(Sentry.flush(2000));
 
                 await message.reply(replyMessage);

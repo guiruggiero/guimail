@@ -18,10 +18,11 @@
 		"wrangler": "^4.42.2"
 	},
 	"scripts": {
-		"whoami": "npx wrangler whoami",
-		"deploy": "npx wrangler deploy",
-		"key": "npx wrangler secret put/delete <KEY>",
+		"lint": "npx eslint .",
+		"lint-fix": "npx eslint . --fix",
 		"update": "npm i -D wrangler@latest",
-		"lint": "npx eslint ."
+		"whoami": "npx wrangler whoami",
+		"key": "npx wrangler secret put/delete <KEY>",
+		"deploy": "npx wrangler deploy"
 	}
 }

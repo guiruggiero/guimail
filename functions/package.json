@@ -25,7 +25,6 @@
   "scripts": {
     "lint": "ESLINT_USE_FLAT_CONFIG=false eslint .",
     "lint-fix": "ESLINT_USE_FLAT_CONFIG=false eslint . --fix",
-    "deploy": "npx firebase deploy --only functions:guimail",
-    "delete": "npx firebase functions:delete guimail"
+    "deploy": "npx firebase deploy --only functions:guimail"
   }
 }

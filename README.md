@@ -9,7 +9,7 @@ An intelligent multi-purpose email processing AI agent. Forward any email to Gui
 
 - 📅 **Extract calendar events** - Get iCal invitations for meetings, appointments, or any event (in-person or virtual) and add to your calendar with one tap/click
 - 📝 **Summarize content** - Receive concise summaries of long emails, newsletters, and threads
-- 💰 **Track expenses** - Automatically add credit card statement balances to a budget spreadsheet and add to Splitwise
+- 💰 **Track expenses** - Automatically add credit card statement balances to a budget spreadsheet and split shared expenses with Splitwise
 
 Simply forward an email, and GuiMail intelligently chooses the right action based on the content. No manual configuration needed.
 

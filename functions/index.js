@@ -8,7 +8,7 @@ const {default: ical} = require("ical-generator");
 const {google} = require("googleapis");
 const path = require("node:path");
 const axios = require("axios");
-const axiosRetry = require("axios-retry");
+const {default: axiosRetry} = require("axios-retry");
 const MailComposer = require("nodemailer/lib/mail-composer");
 
 // Initializations
@@ -98,13 +98,51 @@ const addToBudget = {
         description: "Credit card statement balance without currency sign" +
           " (e.g., 127.43)",
       },
+      currency: {
+        type: Type.STRING,
+        enum: ["USD", "EUR", "BRL"],
+        description: "Credit card statement balance currency",
+      },
       confidence: {
         type: Type.NUMBER,
         description: "Confidence score between 0 and 1 indicating" +
           " certainty of the data extraction (e.g., '0.85')",
       },
     },
-    required: ["issuer", "balance", "confidence"],
+    required: ["issuer", "balance", "currency", "confidence"],
+  },
+};
+const addToSplitwise = {
+  name: "add_to_splitwise",
+  description: "Adds an expense to Splitwise to be shared with other people",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      title: { // Splitwise `description`
+        type: Type.STRING,
+        description: "Short expense title, max 5 words",
+      },
+      amount: { // Splitwise `cost`
+        type: Type.NUMBER,
+        description: "Expense amount without currency sign (e.g., 127.43)",
+      },
+      currency: {
+        type: Type.STRING,
+        enum: ["USD", "EUR", "BRL"],
+        description: "Expense currency",
+      },
+      details: {
+        type: Type.STRING,
+        description: "Summary of all other expense information, including " +
+          "the people involved (e.g., 'Share with: Georgia, Panda, and Ma')",
+      },
+      confidence: {
+        type: Type.NUMBER,
+        description: "Confidence score between 0 and 1 indicating" +
+          " certainty of the data extraction (e.g., '0.85')",
+      },
+    },
+    required: ["title", "amount", "currency", "details", "confidence"],
   },
 };
 
@@ -122,6 +160,7 @@ const modelConfig = {
         createCalendarEvent,
         summarizeEmail,
         addToBudget,
+        addToSplitwise,
       ],
     }],
     toolConfig: {
@@ -132,12 +171,38 @@ const modelConfig = {
   },
 };
 
+// Axios instance for Splitwise
+const axiosInstance = axios.create({
+  baseURL: "https://secure.splitwise.com/api/v3.0",
+  headers: {"Authorization": `Bearer ${process.env.SPLITWISE_API_KEY}`},
+});
+
+// Retry configuration
+axiosRetry(axiosInstance, {
+  retries: 2, // Retry attempts
+  retryDelay: axiosRetry.exponentialDelay, // 1s then 2s between retries
+  // Only retry on network or 5xx errors
+  retryCondition: (error) => {
+    return axiosRetry.isNetworkOrIdempotentRequestError(error) ||
+      (error.response && error.response.status >= 500);
+  },
+});
+
+// Splitwise error checker
+const checkSplitwiseError = (expenseData) => {
+  const {error, errors} = expenseData;
+
+  if (error) throw new Error(`Splitwise API: ${error}`); // {error: ""}
+
+  if (errors && Object.keys(errors).length > 0) { // {errors: {base: [""]}}
+    const errorMessage = Object.values(errors).flat().join(", ");
+    throw new Error(`Splitwise API: ${errorMessage}`);
+  }
+};
+
 // Tool handlers
 const toolHandlers = {
   create_calendar_event: async (args) => {
-    Sentry.logger.info("Function: tool create_calendar_event",
-        {title: args.summary});
-
     // Validate confidence threshold
     if (args.confidence < 0.5) {
       throw new Error(`Low confidence: ${args.confidence}`);
@@ -157,13 +222,10 @@ const toolHandlers = {
       location: args.location,
     });
     const icsString = cal.toString();
-    Sentry.logger.info("Function: iCal created", {
-      icsString: icsString.substring(0, 500),
-    });
 
     return {
       type: "calendar_event",
-      text: `Event created. Confidence = ${args.confidence * 100}%.`,
+      text: `Event created. Confidence = ${args.confidence * 100}%`,
       icalEvent: {
         method: "REQUEST",
         content: icsString,
@@ -172,9 +234,6 @@ const toolHandlers = {
   },
 
   summarize_email: async (args) => {
-    Sentry.logger.info("Function: tool summarize_email",
-        {summaryLength: args.summary.length});
-
     return {
       type: "summary",
       text: `Email summary:\n\n${args.summary}`,
@@ -182,8 +241,6 @@ const toolHandlers = {
   },
 
   add_to_budget: async (args) => {
-    Sentry.logger.info("Function: tool add_to_budget", {issuer: args.issuer});
-
     // Validate confidence threshold
     if (args.confidence < 0.5) {
       throw new Error(`Low confidence: ${args.confidence}`);
@@ -222,51 +279,76 @@ const toolHandlers = {
         ],
       },
     });
+    Sentry.logger.info("[6a] Function: Google Sheet updated");
+
+    // Format balance for display
+    const formattedBalance = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: args.currency,
+    }).format(args.balance);
 
     // Build response text
-    let responseText = `${args.issuer} balance ${args.balance} added` +
-      ` to budget.\nConfidence = ${args.confidence * 100}%.`;
+    let responseText = `${args.issuer} balance of ${formattedBalance} added` +
+      ` to budget spreadsheet\nConfidence = ${args.confidence * 100}%`;
 
     // Add to Splitwise
     if (args.issuer === "Capital One") {
-      // Axios instance
-      const axiosInstance = axios.create({
-        baseURL: "https://secure.splitwise.com/api/v3.0",
-        headers: {"Authorization": `Bearer ${process.env.SPLITWISE_API_KEY}`},
-      });
-
-      // Retry configuration
-      axiosRetry(axiosInstance, {
-        retries: 2, // Retry attempts
-        retryDelay: axiosRetry.exponentialDelay, // 1s then 2s between retries
-        // Only retry on network or 5xx errors
-        retryCondition: (error) => {
-          return axiosRetry.isNetworkOrIdempotentRequestError(error) ||
-            (error.response && error.response.status >= 500);
-        },
-      });
-
       // Add expense on Splitwise
-      await axiosInstance.post("/create_expense", {
-        cost: args.balance,
+      const expenseResponse = await axiosInstance.post("/create_expense", {
+        cost: args.balance.toFixed(2),
         description: "Capital One",
         details: "Created via GuiMail",
-        currency_code: "USD",
+        currency_code: args.currency,
         group_id: 0, // Direct expense between users
         users__0__user_id: process.env.SPLITWISE_GUI_ID,
-        users__0__paid_share: args.balance,
-        users__0__owed_share: args.balance/2,
+        users__0__paid_share: args.balance.toFixed(2),
+        users__0__owed_share: (args.balance / 2).toFixed(2),
         users__1__user_id: process.env.SPLITWISE_GEORGIA_ID,
         users__1__paid_share: "0",
-        users__1__owed_share: args.balance/2,
+        users__1__owed_share: (args.balance / 2).toFixed(2),
+      });
+      checkSplitwiseError(expenseResponse.data);
+
+      Sentry.logger.info("[6c] Function: Splitwise expense added", {
+        expense: expenseResponse.data,
       });
 
-      responseText += "\n\nExpense also added on Splitwise.";
+      responseText += "\n\nExpense also added to Splitwise";
     }
 
     return {
       type: "budget_update",
       text: responseText,
+    };
+  },
+
+  add_to_splitwise: async (args) => {
+    // Validate confidence threshold
+    if (args.confidence < 0.5) {
+      throw new Error(`Low confidence: ${args.confidence}`);
+    }
+
+    // Add expense on Splitwise
+    const expenseResponse = await axiosInstance.post("/create_expense", {
+      cost: args.amount.toFixed(2),
+      description: args.title,
+      details: args.details,
+      currency_code: args.currency,
+      group_id: 0, // Direct expense between users
+      split_equally: true,
+    });
+    checkSplitwiseError(expenseResponse.data);
+
+    // Format balance for display
+    const formattedBalance = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: args.currency,
+    }).format(args.amount);
+
+    return {
+      type: "splitwise_expense",
+      text: `"${args.title}" of ${formattedBalance} added to Splitwise. ` +
+        `Details:\n\n${args.details}\n\nConfidence = ${args.confidence * 100}%`,
     };
   },
 };
@@ -279,7 +361,7 @@ const functionConfig = {
 };
 
 exports.guimail = onRequest(functionConfig, async (request, response) => {
-  Sentry.logger.info("Function: started");
+  Sentry.logger.info("[4] Function: started");
 
   // Authenticate worker
   const authHeader = request.headers.authorization;
@@ -310,7 +392,8 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
     // Use text body if it exists, otherwise the HTML body
     messageBody = body.text || body.html;
     if (!messageBody) throw new Error("Message has no text or HTML body");
-    Sentry.logger.info("Function: message body", {
+
+    Sentry.logger.info("[5] Function: message body", {
       messageBody: messageBody.substring(0, 1000),
     });
   } catch (error) {
@@ -340,6 +423,8 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
     if (!handler) {
       throw new Error(`Unknown tool returned: ${toolCall.name}`);
     }
+
+    Sentry.logger.info("[6] Function: Gemini called", {toolCall});
   } catch (error) {
     Sentry.captureException(error, {contexts: {result}});
     await Sentry.flush(2000);
@@ -352,9 +437,11 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
   let toolResult = {};
   try {
     toolResult = await handler(toolCall.args);
+
+    Sentry.logger.info("[7] Function: tool handled", {toolResult});
   } catch (error) {
     Sentry.captureException(error, {contexts: {
-      toolCall,
+      toolCall: toolCall.args,
       partialResult: toolResult,
     }});
     await Sentry.flush(2000);
@@ -395,7 +482,7 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
       });
     });
 
-    Sentry.logger.info("Function: done", {toolType: toolResult.type});
+    Sentry.logger.info("[8] Function: done", {toolType: toolResult.type});
     await Sentry.flush(2000);
 
     // Reply to message
