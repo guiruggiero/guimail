@@ -288,8 +288,8 @@ const toolHandlers = {
     }).format(args.balance);
 
     // Build response text
-    let responseText = `${args.issuer} balance of ${formattedBalance} added` +
-      ` to budget spreadsheet\nConfidence = ${args.confidence * 100}%`;
+    let responseText = `${args.issuer} balance of <b>${formattedBalance}</b>` +
+      ` added to budget spreadsheet\nConfidence = ${args.confidence * 100}%`;
 
     // Add to Splitwise
     if (args.issuer === "Capital One") {
@@ -347,8 +347,9 @@ const toolHandlers = {
 
     return {
       type: "splitwise_expense",
-      text: `"${args.title}" of ${formattedBalance} added to Splitwise. ` +
-        `Details:\n\n${args.details}\n\nConfidence = ${args.confidence * 100}%`,
+      text: `<b>"${args.title}"</b> of <b>${formattedBalance}</b> added to ` +
+        "Splitwise. Details:\n\n$<i>{args.details}</i>\n\nConfidence = " +
+        `${args.confidence * 100}%`,
     };
   },
 };
