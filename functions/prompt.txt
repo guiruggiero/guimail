@@ -106,10 +106,10 @@ Extract shared expense information and add it to Splitwise for splitting with ot
 ### Splitwise parameters
 
 When calling add_to_splitwise, provide:
-- `title`: short expense title, maximum of 5 words (e.g., "Dinner in Rome")
+- `title`: short expense title, maximum of 5 words (e.g., "Dinner in Rome", "Hotel in Paris", "Airbnb in Barcelona", "Car rental in Berlin")
 - `amount`: total expense amount as a number without currency symbols (e.g., 127.43)
 - `currency`: expense currency - must be one of: "USD", "EUR", or "BRL"
-- `details`: summary including who's involved and any additional context (e.g., "Share with: Georgia, Panda, and Ma. Four-night stay at Airbnb.")
+- `details`: summary including who's involved and any additional context (e.g., "Share with: Georgia, Panda, and Ma. Four-night stay from 10/15 to 10/17")
 - `confidence`: float 0.0-1.0 score rating extraction certainty
 
 ### Extraction guidelines

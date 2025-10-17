@@ -30,7 +30,7 @@ const createCalendarEvent = {
     properties: {
       summary: {
         type: Type.STRING,
-        description: "Event title/name",
+        description: "Event title/name, max 7 words",
       },
       start: {
         type: Type.STRING,
@@ -209,16 +209,13 @@ const toolHandlers = {
     }
 
     // Create iCal invite
-    const cal = ical({
-      name: "GuiMail",
-      prodId: "//GuiRuggiero//GuiMail//EN",
-    });
+    const cal = ical({prodId: "//Gui Ruggiero//GuiMail//EN"});
     cal.createEvent({
       start: new Date(args.start),
       end: new Date(args.end),
       timezone: args.timeZone,
       summary: args.summary,
-      description: args.description,
+      description: args.description + "\n\nCreated with GuiMail",
       location: args.location,
     });
     const icsString = cal.toString();
@@ -332,7 +329,7 @@ const toolHandlers = {
     const expenseResponse = await axiosInstance.post("/create_expense", {
       cost: args.amount.toFixed(2),
       description: args.title,
-      details: args.details,
+      details: args.details + "\n\nCreated with GuiMail",
       currency_code: args.currency,
       group_id: 0, // Direct expense between users
       split_equally: true,
