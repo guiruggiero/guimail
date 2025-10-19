@@ -55,16 +55,16 @@ The system consists of two main components:
 
 ### 📦 Dependencies
 - `@google/genai` - Gemini API SDK
-- `postal-mime` - email parsing and content extraction
-- `ical-generator` - iCal invitation creation
-- `nodemailer` - email composition
-- `firebase-functions` - serverless backend
+- `@sentry/cloudflare` and `@sentry/node` - error tracking and monitoring
 - `axios` and `axios-retry` - API communication with retry logic
 - `cloudflare:email` - email worker runtime
-- `@sentry/cloudflare` and `@sentry/node` - error tracking and monitoring
 - `eslint` and `stylistic` - code linting
-- `wrangler` and `firebase-tools` - deployment and management
+- `firebase-functions` - serverless backend
+- `firebase-tools` and `wrangler` - deployment and management
 - `googleapis` - Google Sheets API integration
+- `ical-generator` - iCal invitation creation
+- `nodemailer` - email composition
+- `postal-mime` - email parsing and content extraction
 
 ---
 

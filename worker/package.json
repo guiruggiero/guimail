@@ -11,15 +11,15 @@
 		"axios-retry": "^4.5.0"
 	},
 	"devDependencies": {
-		"@eslint/js": "^9.37.0",
-		"@stylistic/eslint-plugin": "^5.4.0",
-		"eslint": "^9.37.0",
-		"globals": "^16.3.0",
+    	"@eslint/js": "^9.38.0",
+		"@eslint/json": "^0.13.2",
+		"@stylistic/eslint-plugin": "^5.5.0",
+		"eslint": "^9.38.0",
+		"globals": "^16.4.0",
 		"wrangler": "^4.42.2"
 	},
 	"scripts": {
-		"lint": "npx eslint .",
-		"lint-fix": "npx eslint . --fix",
+		"lint": "eslint .",
 		"update": "npm i -D wrangler@latest",
 		"whoami": "npx wrangler whoami",
 		"key": "npx wrangler secret put/delete <KEY>",
