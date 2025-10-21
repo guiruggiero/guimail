@@ -20,10 +20,7 @@ axiosRetry(axiosInstance, {
     retries: 2, // Retry attempts
     retryDelay: axiosRetry.exponentialDelay, // 1s then 2s between retries
     // Only retry on network or 5xx errors
-    retryCondition: (error) => {
-        return axiosRetry.isNetworkOrIdempotentRequestError(error) ||
-            (error.response && error.response.status >= 500);
-    },
+    retryCondition: (error) => axiosRetry.isNetworkOrIdempotentRequestError(error) || (error.response && error.response.status > 500),
 });
 
 export default Sentry.withSentry(
@@ -86,13 +83,13 @@ export default Sentry.withSentry(
                     },
                     params: {from, subject, messageID, references},
                 });
-                Sentry.logger.info("[9] Worker: function call successful");
+                Sentry.logger.info("[10] Worker: function call successful");
 
             } catch (error) {
                 // GuiMail responded with status 4xx or 5xx
                 if (error.response) Sentry.logger.warn("Worker: GuiMail failed", {
-                    status: error.response.status,
-                    data: error.response.data,
+                    status: error.response?.status,
+                    data: error.response?.data,
                 });
 
                 // Other errors
@@ -115,7 +112,7 @@ export default Sentry.withSentry(
                     response.data,
                 );
 
-                Sentry.logger.info("[10] Worker: done");
+                Sentry.logger.info("[11] Worker: done");
                 ctx.waitUntil(Sentry.flush(2000));
 
                 await message.reply(replyMessage);

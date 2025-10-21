@@ -55,6 +55,7 @@ The system consists of two main components:
 
 ### 📦 Dependencies
 - `@google/genai` - Gemini API SDK
+- `@langfuse/client` - prompt management
 - `@sentry/cloudflare` and `@sentry/node` - error tracking and monitoring
 - `axios` and `axios-retry` - API communication with retry logic
 - `cloudflare:email` - email worker runtime

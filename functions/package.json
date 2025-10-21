@@ -8,6 +8,7 @@
   "main": "index.js",
   "dependencies": {
     "@google/genai": "^1.25.0",
+    "@langfuse/client": "^4.2.0",
     "@sentry/node": "^10.20.0",
     "axios": "^1.12.2",
     "axios-retry": "^4.5.0",

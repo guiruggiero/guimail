@@ -1,7 +1,7 @@
 // Imports
 const Sentry = require("@sentry/node");
 const {GoogleGenAI, Type, FunctionCallingConfigMode} = require("@google/genai");
-const fs = require("node:fs");
+const {LangfuseClient} = require("@langfuse/client");
 const {onRequest} = require("firebase-functions/v2/https");
 const {default: PostalMime} = require("postal-mime");
 const {default: ical} = require("ical-generator");
@@ -18,7 +18,11 @@ Sentry.init({
   enableLogs: true,
 });
 const ai = new GoogleGenAI({apiKey: process.env.GEMINI_API_KEY});
-const instructions = fs.readFileSync("prompt.txt", "utf8");
+const langfuse = new LangfuseClient({
+  secretKey: process.env.LANGFUSE_SECRET_KEY,
+  publicKey: process.env.LANGFUSE_PUBLIC_KEY,
+  baseUrl: "https://us.cloud.langfuse.com",
+});
 
 // Model tools
 const createCalendarEvent = {
@@ -150,7 +154,6 @@ const addToSplitwise = {
 const modelConfig = {
   model: "gemini-2.5-pro",
   config: {
-    systemInstruction: instructions,
     temperature: 0.1,
     thinkingconfig: {
       thinkingbudget: 0,
@@ -398,22 +401,44 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
     Sentry.captureException(error, {contexts: {body}});
     await Sentry.flush(2000);
 
-    response.status(400).send("Body extraction error");
+    response.status(500).send("Body extraction error");
+    return;
+  }
+
+  // Get prompt
+  let instructions = "";
+  try {
+    const promptResponse = await langfuse.prompt.get("GuiMail");
+    instructions = promptResponse.prompt;
+
+    Sentry.logger.info("[6] Function: prompt fetched", {
+      version: promptResponse.version,
+      prompt: instructions.substring(0, 200),
+    });
+  } catch (error) {
+    Sentry.captureException(error);
+    await Sentry.flush(2000);
+
+    response.status(502).send("Prompt fetching error");
     return;
   }
 
   // Call Gemini
-  let result;
+  let result = {};
   let toolCall = {};
-  let handler;
+  let handler = null;
   try {
     result = await ai.models.generateContent({
       ...modelConfig,
-      contents: [{role: "user", parts: [{text: messageBody}]}],
+      config: {
+        ...modelConfig.config,
+        systemInstruction: instructions,
+      },
+      contents: messageBody,
     });
 
     // Validate tool call
-    if (!result.functionCalls || result.functionCalls.length === 0) {
+    if (!result?.functionCalls || result.functionCalls.length === 0) {
       throw new Error("No tool call returned");
     }
     toolCall = result.functionCalls[0];
@@ -422,9 +447,12 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
       throw new Error(`Unknown tool returned: ${toolCall.name}`);
     }
 
-    Sentry.logger.info("[6] Function: Gemini called", {toolCall});
+    Sentry.logger.info("[7] Function: Gemini called", {toolCall});
   } catch (error) {
-    Sentry.captureException(error, {contexts: {result}});
+    Sentry.captureException(error, {contexts: {
+      geminiResult: result,
+      messageBody: messageBody.substring(0, 1000),
+    }});
     await Sentry.flush(2000);
 
     response.status(502).send("Gemini call error");
@@ -436,15 +464,18 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
   try {
     toolResult = await handler(toolCall.args);
 
-    Sentry.logger.info("[7] Function: tool handled", {toolResult});
+    Sentry.logger.info("[8] Function: tool handled", {toolResult});
   } catch (error) {
     Sentry.captureException(error, {contexts: {
-      toolCall: toolCall.args,
+      toolName: toolCall?.name,
+      toolCall: toolCall?.args,
       partialResult: toolResult,
     }});
     await Sentry.flush(2000);
 
-    response.status(400).send("Tool handler error");
+    // Allow worker to retry on Google Sheets API errors
+    const errorCode = (toolCall.name === "add_to_budget") ? 502 : 500;
+    response.status(errorCode).send("Tool handler error");
     return;
   }
 
@@ -480,7 +511,7 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
       });
     });
 
-    Sentry.logger.info("[8] Function: done", {toolType: toolResult.type});
+    Sentry.logger.info("[9] Function: done", {toolType: toolResult.type});
     await Sentry.flush(2000);
 
     // Reply to message
@@ -490,7 +521,7 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
     Sentry.captureException(error, {contexts: {toolResult}});
     await Sentry.flush(2000);
 
-    response.status(400).send("Reply creation error");
+    response.status(500).send("Reply creation error");
     return;
   }
 });
