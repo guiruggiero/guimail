@@ -405,7 +405,7 @@ exports.guimail = onRequest(functionConfig, async (request, response) => {
     return;
   }
 
-  // Get prompt
+  // Get model prompt
   let instructions = "";
   try {
     const promptResponse = await langfuse.prompt.get("GuiMail");
