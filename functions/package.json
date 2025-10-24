@@ -1,6 +1,7 @@
 {
   "name": "functions",
   "description": "Cloud Functions for Firebase",
+  "type": "module",
   "engines": {
     "node": "22"
   },
@@ -15,7 +16,7 @@
     "firebase-functions": "^6.5.0",
     "googleapis": "^162.0.0",
     "ical-generator": "^9.0.0",
-    "nodemailer": "^7.0.9",
+    "nodemailer": "^7.0.10",
     "postal-mime": "^2.5.0"
   },
   "devDependencies": {

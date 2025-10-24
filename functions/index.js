@@ -1,15 +1,16 @@
 // Imports
-const Sentry = require("@sentry/node");
-const {GoogleGenAI, Type, FunctionCallingConfigMode} = require("@google/genai");
-const {LangfuseClient} = require("@langfuse/client");
-const {onRequest} = require("firebase-functions/v2/https");
-const {default: PostalMime} = require("postal-mime");
-const {default: ical} = require("ical-generator");
-const {google} = require("googleapis");
-const path = require("node:path");
-const axios = require("axios");
-const {default: axiosRetry} = require("axios-retry");
-const MailComposer = require("nodemailer/lib/mail-composer");
+import * as Sentry from "@sentry/node";
+import {GoogleGenAI, Type, FunctionCallingConfigMode} from "@google/genai";
+import {LangfuseClient} from "@langfuse/client";
+import {fileURLToPath} from "node:url";
+import {onRequest} from "firebase-functions/v2/https";
+import PostalMime from "postal-mime";
+import ical from "ical-generator";
+import {google} from "googleapis";
+import path from "node:path";
+import axios from "axios";
+import axiosRetry from "axios-retry";
+import MailComposer from "nodemailer/lib/mail-composer/index.js";
 
 // Initializations
 Sentry.init({
@@ -23,6 +24,8 @@ const langfuse = new LangfuseClient({
   publicKey: process.env.LANGFUSE_PUBLIC_KEY,
   baseUrl: "https://us.cloud.langfuse.com",
 });
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Model tools
 const createCalendarEvent = {
@@ -361,7 +364,7 @@ const functionConfig = {
   timeoutSeconds: 60,
 };
 
-exports.guimail = onRequest(functionConfig, async (request, response) => {
+export const guimail = onRequest(functionConfig, async (request, response) => {
   Sentry.logger.info("[4] Function: started");
 
   // Authenticate worker
