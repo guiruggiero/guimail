@@ -3,7 +3,6 @@ import {defineConfig} from "eslint/config";
 import js from "@eslint/js";
 import stylistic from "@stylistic/eslint-plugin";
 import globals from "globals";
-import json from "@eslint/json";
 
 export default defineConfig([
   // JavaScript configuration
@@ -37,14 +36,5 @@ export default defineConfig([
       }],
       "@stylistic/space-in-parens": "warn",
     },
-  },
-
-  // JSON configuration
-  {
-    files: ["**/*.json"],
-    ignores: ["**/package-lock.json"],
-    plugins: {json},
-    language: "json/json",
-    extends: ["json/recommended"],
   },
 ]);
