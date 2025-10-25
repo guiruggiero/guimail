@@ -20,6 +20,7 @@
 	"scripts": {
 		"lint": "eslint .",
 		"update": "npm i -D wrangler@latest",
+		"auth": "export CLOUDFLARE_API_TOKEN='<token>'",
 		"whoami": "npx wrangler whoami",
 		"key": "npx wrangler secret put/delete <KEY>",
 		"deploy": "npx wrangler deploy"
