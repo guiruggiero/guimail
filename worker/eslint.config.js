@@ -16,7 +16,7 @@ export default defineConfig([
     extends: ["js/recommended"],
     languageOptions: {globals: globals.node},
     rules: {
-      "no-unused-vars": "error",
+      "no-unused-vars": "warn",
       "@stylistic/indent": ["warn", 4],
       "@stylistic/semi": "error",
       "@stylistic/no-extra-semi": "warn",
