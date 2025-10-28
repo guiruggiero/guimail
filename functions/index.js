@@ -362,6 +362,7 @@ const functionConfig = {
   cors: true,
   maxInstances: 2,
   timeoutSeconds: 60,
+  memory: '512MiB',
 };
 
 export const guimail = onRequest(functionConfig, async (request, response) => {
