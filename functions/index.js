@@ -351,7 +351,7 @@ const toolHandlers = {
     return {
       type: "splitwise_expense",
       text: `<b>"${args.title}"</b> of <b>${formattedBalance}</b> added to ` +
-        "Splitwise. Details:\n\n$<i>{args.details}</i>\n\nConfidence = " +
+        `Splitwise. Details:\n\n$<i>${args.details}</i>\n\nConfidence = ` +
         `${args.confidence * 100}%`,
     };
   },
