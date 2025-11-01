@@ -7,15 +7,15 @@
 	"main": "src/index.js",
 	"dependencies": {
 		"@sentry/cloudflare": "^10.19.0",
-		"axios": "^1.12.2",
+		"axios": "^1.13.1",
 		"axios-retry": "^4.5.0"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.38.0",
 		"@stylistic/eslint-plugin": "^5.5.0",
-		"eslint": "^9.38.0",
+		"eslint": "^9.39.0",
 		"globals": "^16.4.0",
-		"wrangler": "^4.45.1"
+		"wrangler": "^4.45.3"
 	},
 	"scripts": {
 		"lint": "eslint .",
