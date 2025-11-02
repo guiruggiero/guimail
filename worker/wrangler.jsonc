@@ -1,4 +1,5 @@
 {
+	"$schema": "./node_modules/wrangler/config-schema.json",
 	"name": "guimail",
 	"main": "src/index.js",
 	"workers_dev": false,
