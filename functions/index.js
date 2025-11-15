@@ -155,7 +155,7 @@ const addToSplitwise = {
 
 // Model configuration
 const modelConfig = {
-  model: "gemini-2.5-pro",
+  model: "gemini-pro-latest",
   config: {
     temperature: 0.1,
     thinkingconfig: {
