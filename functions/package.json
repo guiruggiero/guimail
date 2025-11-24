@@ -10,7 +10,7 @@
   "dependencies": {
     "@google/genai": "^1.28.0",
     "@langfuse/client": "^4.3.0",
-    "@sentry/node": "^10.22.0",
+    "@sentry/node": "^10.27.0",
     "axios": "^1.13.1",
     "axios-retry": "^4.5.0",
     "firebase-functions": "^7.0.0",
