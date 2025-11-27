@@ -15,8 +15,11 @@ import MailComposer from "nodemailer/lib/mail-composer/index.js";
 // Initializations
 Sentry.init({
   dsn: process.env.SENTRY_DSN,
-  tracesSampleRate: 1.0,
   enableLogs: true,
+  integrations: [Sentry.googleGenAIIntegration({
+    recordInputs: true,
+    recordOutputs: true,
+  })],
 });
 const ai = new GoogleGenAI({apiKey: process.env.GEMINI_API_KEY});
 const langfuse = new LangfuseClient({
