@@ -300,19 +300,23 @@ const toolHandlers = {
 
     // Add to Splitwise
     if (args.issuer === "Capital One") {
+      const cost = args.balance.toFixed(2);
+      const halfShare = (args.balance / 2).toFixed(2);
+      const remainderShare = (cost - halfShare).toFixed(2);
+
       // Add expense on Splitwise
       const expenseResponse = await axiosInstance.post("/create_expense", {
-        cost: args.balance.toFixed(2),
+        cost: cost,
         description: "Capital One",
         details: "Created via GuiMail",
         currency_code: args.currency,
         group_id: 0, // Direct expense between users
         users__0__user_id: process.env.SPLITWISE_GUI_ID,
-        users__0__paid_share: args.balance.toFixed(2),
-        users__0__owed_share: (args.balance / 2).toFixed(2),
+        users__0__paid_share: cost,
+        users__0__owed_share: halfShare,
         users__1__user_id: process.env.SPLITWISE_GEORGIA_ID,
         users__1__paid_share: "0",
-        users__1__owed_share: (args.balance / 2).toFixed(2),
+        users__1__owed_share: remainderShare,
       });
       checkSplitwiseError(expenseResponse.data);
 
