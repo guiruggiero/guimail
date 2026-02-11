@@ -7,7 +7,7 @@
 	"main": "src/index.js",
 	"dependencies": {
 		"@sentry/cloudflare": "^10.38.0",
-		"axios": "^1.13.4",
+		"axios": "^1.13.5",
 		"axios-retry": "^4.5.0"
 	},
 	"devDependencies": {
