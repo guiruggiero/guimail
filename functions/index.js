@@ -22,12 +22,8 @@ Sentry.init({
     recordOutputs: true,
   })],
 });
-const ai = new GoogleGenAI({apiKey: process.env.GEMINI_API_KEY});
-const langfuse = new LangfuseClient({
-  secretKey: process.env.LANGFUSE_SECRET_KEY,
-  publicKey: process.env.LANGFUSE_PUBLIC_KEY,
-  baseUrl: "https://us.cloud.langfuse.com",
-});
+let ai;
+let langfuse;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -375,6 +371,16 @@ const functionConfig = {
 
 export const guimail = onRequest(functionConfig, async (request, response) => {
   Sentry.logger.info("[4] Function: started");
+
+  // Initializations with env variables
+  if (!ai) ai = new GoogleGenAI({apiKey: process.env.GEMINI_API_KEY});
+  if (!langfuse) {
+    langfuse = new LangfuseClient({
+      secretKey: process.env.LANGFUSE_SECRET_KEY,
+      publicKey: process.env.LANGFUSE_PUBLIC_KEY,
+      baseUrl: "https://us.cloud.langfuse.com",
+    });
+  }
 
   // Authenticate worker
   const authHeader = request.headers.authorization;
