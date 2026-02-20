@@ -8,7 +8,7 @@ updates:
     schedule:
       interval: monthly
       time: "05:00"
-      timezone: Europe/Berlin
+      timezone: America/Los_Angeles
     groups:
       new-versions:
         applies-to: version-updates
