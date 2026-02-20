@@ -16,11 +16,11 @@
     "firebase-functions": "^7.0.5",
     "googleapis": "^171.0.0",
     "ical-generator": "^10.0.0",
-    "nodemailer": "^7.0.13",
+    "nodemailer": "^8.0.1",
     "postal-mime": "^2.7.1"
   },
   "devDependencies": {
-    "eslint": "^9.39.0",
+    "eslint": "^10.0.1",
     "eslint-config-google": "^0.14.0",
     "firebase-tools": "^15.5.1"
   },
