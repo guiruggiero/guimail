@@ -22,8 +22,12 @@ Sentry.init({
     recordOutputs: true,
   })],
 });
-let ai;
-let langfuse;
+const ai = new GoogleGenAI({apiKey: process.env.GEMINI_API_KEY});
+const langfuse = new LangfuseClient({
+  secretKey: process.env.LANGFUSE_SECRET_KEY,
+  publicKey: process.env.LANGFUSE_PUBLIC_KEY,
+  baseUrl: "https://us.cloud.langfuse.com",
+});
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -158,8 +162,8 @@ const modelConfig = {
   model: "gemini-pro-latest",
   config: {
     temperature: 0.1,
-    thinkingconfig: {
-      thinkingbudget: 0,
+    thinkingConfig: {
+      thinkingBudget: 0,
     },
     tools: [{
       functionDeclarations: [
@@ -180,6 +184,7 @@ const modelConfig = {
 // Axios instance for Splitwise
 const axiosInstance = axios.create({
   baseURL: "https://secure.splitwise.com/api/v3.0",
+  timeout: 10000, // 10s
   headers: {"Authorization": `Bearer ${process.env.SPLITWISE_API_KEY}`},
 });
 
@@ -221,7 +226,7 @@ const toolHandlers = {
       end: new Date(args.end),
       timezone: args.timeZone,
       summary: args.summary,
-      description: args.description + "\n\nCreated with GuiMail",
+      description: (args.description ?? "") + "\n\nCreated with GuiMail",
       location: args.location,
     });
     const icsString = cal.toString();
@@ -296,9 +301,11 @@ const toolHandlers = {
 
     // Add to Splitwise
     if (args.issuer === "Capital One") {
-      const cost = args.balance.toFixed(2);
-      const halfShare = (args.balance / 2).toFixed(2);
-      const remainderShare = (cost - halfShare).toFixed(2);
+      const costCents = Math.round(args.balance * 100);
+      const halfCents = Math.floor(costCents / 2);
+      const cost = (costCents / 100).toFixed(2);
+      const halfShare = (halfCents / 100).toFixed(2);
+      const remainderShare = ((costCents - halfCents) / 100).toFixed(2);
 
       // Add expense on Splitwise
       const expenseResponse = await axiosInstance.post("/create_expense", {
@@ -355,7 +362,7 @@ const toolHandlers = {
     return {
       type: "splitwise_expense",
       text: `"${args.title}" of ${formattedBalance} added to ` +
-        `Splitwise. Details:\n\n$${args.details}\n\nConfidence = ` +
+        `Splitwise. Details:\n\n${args.details}\n\nConfidence = ` +
         `${args.confidence * 100}%`,
     };
   },
@@ -372,22 +379,12 @@ const functionConfig = {
 export const guimail = onRequest(functionConfig, async (request, response) => {
   Sentry.logger.info("[4] Function: started");
 
-  // Initializations with env variables
-  if (!ai) ai = new GoogleGenAI({apiKey: process.env.GEMINI_API_KEY});
-  if (!langfuse) {
-    langfuse = new LangfuseClient({
-      secretKey: process.env.LANGFUSE_SECRET_KEY,
-      publicKey: process.env.LANGFUSE_PUBLIC_KEY,
-      baseUrl: "https://us.cloud.langfuse.com",
-    });
-  }
-
   // Authenticate worker
   const authHeader = request.headers.authorization;
   const expectedToken = `Bearer ${process.env.WORKER_SECRET}`;
   if (authHeader !== expectedToken) {
     Sentry.logger.warn("Request not authenticated", {
-      authHeader: authHeader,
+      authHeaderPresent: !!authHeader,
       requestQuery: request.query,
     });
     await Sentry.flush(2000);
@@ -402,7 +399,7 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
 
   // Extract body from message
   let body = {};
-  let messageBody = "";
+  let messageBody;
   try {
     // Parse the message stream
     const parser = new PostalMime();
@@ -424,7 +421,7 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
   }
 
   // Get model prompt
-  let instructions = "";
+  let instructions;
   try {
     const promptResponse = await langfuse.prompt.get("GuiMail");
     instructions = promptResponse.prompt;
@@ -443,8 +440,8 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
 
   // Call Gemini
   let result = {};
-  let toolCall = {};
-  let handler = null;
+  let toolCall;
+  let handler;
   try {
     result = await ai.models.generateContent({
       ...modelConfig,
@@ -498,11 +495,12 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
   }
 
   // Create message back
-  let rawReply = "";
+  let rawReply;
   try {
     // Set fields for threading
-    const subject = originalSubject.trim().toLowerCase().startsWith("re:") ?
-      originalSubject : `Re: ${originalSubject}`; // Add "Re:" prefix
+    const subjectStr = originalSubject ?? "";
+    const subject = subjectStr.trim().toLowerCase().startsWith("re:") ?
+      subjectStr : `Re: ${subjectStr}`; // Add "Re:" prefix
     const newReferences = [references, messageID].filter(Boolean).join(" ");
 
     // Base message configuration

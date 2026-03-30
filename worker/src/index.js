@@ -87,7 +87,7 @@ export default Sentry.withSentry(
             } catch (error) {
                 // GuiMail responded with status 4xx or 5xx
                 if (error.response) Sentry.logger.warn("Worker: GuiMail failed", {
-                    status: error.response?.status,
+                    status: error.response.status,
                     data: error.response?.data,
                 });
 

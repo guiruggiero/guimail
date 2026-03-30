@@ -25,7 +25,7 @@ GuiMail processes emails forwarded by a user. Two components work in sequence:
 
 ### Cloudflare Email Worker (`worker/src/index.js`)
 Receives emails via Cloudflare Email Routing. Pipeline:
-1. Validates sender against allowlist (built lazily from env vars on first invocation; rejects with `setReject`)
+1. Validates sender against allowlist (built lazily from env vars, not available at module scope; rejects with `setReject`)
 2. Enforces 5MB size limit (rejects oversized emails)
 3. Extracts `subject`, `messageID`, and `references` headers from the raw message
 4. POSTs the raw email body (octet stream) to the Firebase Cloud Function with `WORKER_SECRET` auth and metadata as query params
@@ -48,6 +48,8 @@ Single exported function `guimail`. Pipeline:
 All tools with data extraction include a `confidence` field; handlers reject calls below 0.5.
 
 **Reply threading**: the reply sets `In-Reply-To` and `References` headers using the original `messageID` and `references` query params.
+
+**HTTP status code contract**: the function returns `502` for retryable errors (Gemini, Langfuse, Sheets API) and `500` for deterministic/post-write errors; the worker retries on `> 500` only.
 
 **Required env vars (Worker):**
 - `SENTRY_DSN`, `WORKER_SECRET`, `EMAIL_GUIMAIL`, `EMAIL_GUI`, `EMAIL_GUI_AUTO_FWD`, `EMAIL_UM`
