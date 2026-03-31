@@ -210,6 +210,39 @@ const checkSplitwiseError = (expenseData) => {
   }
 };
 
+// Split calculator for 50/50 expenses
+const splitHalf = (amount) => {
+  const costCents = Math.round(amount * 100);
+  const halfCents = Math.floor(costCents / 2);
+  return {
+    cost: (costCents / 100).toFixed(2),
+    halfShare: (halfCents / 100).toFixed(2),
+    remainderShare: ((costCents - halfCents) / 100).toFixed(2),
+  };
+};
+
+// Creator for expenses with Georgia
+const createExpenseWithGeorgia = async (description, amount, currency) => {
+  const {cost, halfShare, remainderShare} = splitHalf(amount);
+
+  const expenseResponse = await axiosInstance.post("/create_expense", {
+    cost: cost,
+    description: description,
+    details: "Created with GuiMail",
+    currency_code: currency,
+    group_id: 0, // Direct expense between users
+    users__0__user_id: process.env.SPLITWISE_GUI_ID,
+    users__0__paid_share: cost,
+    users__0__owed_share: halfShare,
+    users__1__user_id: process.env.SPLITWISE_GEORGIA_ID,
+    users__1__paid_share: "0",
+    users__1__owed_share: remainderShare,
+  });
+  checkSplitwiseError(expenseResponse.data);
+
+  return expenseResponse;
+};
+
 // Tool handlers
 const toolHandlers = {
   create_calendar_event: async (args) => {
@@ -299,29 +332,10 @@ const toolHandlers = {
 
     // Add to Splitwise
     if (args.issuer === "Capital One") {
-      const costCents = Math.round(args.balance * 100);
-      const halfCents = Math.floor(costCents / 2);
-      const cost = (costCents / 100).toFixed(2);
-      const halfShare = (halfCents / 100).toFixed(2);
-      const remainderShare = ((costCents - halfCents) / 100).toFixed(2);
+      const expenseResponse = await createExpenseWithGeorgia(
+        "Capital One", args.balance, args.currency);
 
-      // Add expense on Splitwise
-      const expenseResponse = await axiosInstance.post("/create_expense", {
-        cost: cost,
-        description: "Capital One",
-        details: "Created via GuiMail",
-        currency_code: args.currency,
-        group_id: 0, // Direct expense between users
-        users__0__user_id: process.env.SPLITWISE_GUI_ID,
-        users__0__paid_share: cost,
-        users__0__owed_share: halfShare,
-        users__1__user_id: process.env.SPLITWISE_GEORGIA_ID,
-        users__1__paid_share: "0",
-        users__1__owed_share: remainderShare,
-      });
-      checkSplitwiseError(expenseResponse.data);
-
-      Sentry.logger.info("[6c] Function: Splitwise expense added", {
+      Sentry.logger.info("[6b] Function: Splitwise expense added", {
         expense: expenseResponse.data,
       });
 
@@ -340,6 +354,27 @@ const toolHandlers = {
       throw new Error(`Low confidence: ${args.confidence}`);
     }
 
+    // Format amount for display
+    const formattedAmount = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: args.currency,
+    }).format(args.amount);
+
+    // Google Fi split with Georgia
+    if (args.title.toLowerCase().includes("google fi")) {
+      const expenseResponse = await createExpenseWithGeorgia(
+        "Google Fi", args.amount, args.currency);
+
+      Sentry.logger.info("[6c] Function: Splitwise expense added", {
+        expense: expenseResponse.data,
+      });
+
+      return {
+        type: "splitwise_expense",
+        text: `Google Fi of ${formattedAmount} added to Splitwise`,
+      };
+    }
+
     // Add expense on Splitwise
     const expenseResponse = await axiosInstance.post("/create_expense", {
       cost: args.amount.toFixed(2),
@@ -351,15 +386,9 @@ const toolHandlers = {
     });
     checkSplitwiseError(expenseResponse.data);
 
-    // Format balance for display
-    const formattedBalance = new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: args.currency,
-    }).format(args.amount);
-
     return {
       type: "splitwise_expense",
-      text: `"${args.title}" of ${formattedBalance} added to ` +
+      text: `"${args.title}" of ${formattedAmount} added to ` +
         `Splitwise. Details:\n\n${args.details}\n\nConfidence = ` +
         `${args.confidence * 100}%`,
     };
@@ -385,9 +414,10 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
       authHeaderPresent: !!authHeader,
       requestQuery: request.query,
     });
-    await Sentry.flush(2000);
 
     response.status(401).send("Request not authenticated");
+
+    await Sentry.flush(2000);
     return;
   }
 
@@ -412,9 +442,10 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
     });
   } catch (error) {
     Sentry.captureException(error, {contexts: {body}});
-    await Sentry.flush(2000);
 
     response.status(500).send("Body extraction error");
+
+    await Sentry.flush(2000);
     return;
   }
 
@@ -430,9 +461,10 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
     });
   } catch (error) {
     Sentry.captureException(error);
-    await Sentry.flush(2000);
 
     response.status(502).send("Prompt fetching error");
+
+    await Sentry.flush(2000);
     return;
   }
 
@@ -466,9 +498,10 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
       geminiResult: result,
       messageBody: messageBody.substring(0, 1000),
     }});
-    await Sentry.flush(2000);
 
     response.status(502).send("Gemini call error");
+
+    await Sentry.flush(2000);
     return;
   }
 
@@ -484,11 +517,12 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
       toolCall: toolCall?.args,
       partialResult: toolResult,
     }});
-    await Sentry.flush(2000);
 
     // Allow worker to retry on Google Sheets API errors
     const errorCode = (toolCall.name === "add_to_budget") ? 502 : 500;
     response.status(errorCode).send("Tool handler error");
+
+    await Sentry.flush(2000);
     return;
   }
 
@@ -526,16 +560,18 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
     });
 
     Sentry.logger.info("[9] Function: done", {toolType: toolResult.type});
-    await Sentry.flush(2000);
 
     // Reply to message
     response.status(200).send(rawReply);
+
+    await Sentry.flush(2000);
     return;
   } catch (error) {
     Sentry.captureException(error, {contexts: {toolResult}});
-    await Sentry.flush(2000);
 
     response.status(500).send("Reply creation error");
+
+    await Sentry.flush(2000);
     return;
   }
 });

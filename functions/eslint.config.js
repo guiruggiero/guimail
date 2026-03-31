@@ -28,6 +28,7 @@ export default defineConfig([
       "prefer-arrow-callback": "error",
       "quotes": ["error", "double", {allowTemplateLiterals: true}],
       "no-useless-assignment": "warn",
+      "indent": ["error", 2],
     },
   },
   {
