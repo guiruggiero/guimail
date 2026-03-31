@@ -101,7 +101,7 @@ const addToBudget = {
     properties: {
       issuer: {
         type: Type.STRING,
-        enum: ["Chase", "Capital One", "Amex", "TF Bank", "Discover"],
+        enum: ["Chase", "Capital One", "Amex", "Discover"],
         description: "Credit card issuer name",
       },
       balance: {
@@ -265,8 +265,7 @@ const toolHandlers = {
       "Chase": "2",
       "Capital One": "3",
       "Amex": "4",
-      "TF Bank": "5",
-      "Discover": "6",
+      "Discover": "5",
     };
 
     // Update multiple cells at once
