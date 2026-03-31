@@ -360,10 +360,12 @@ const toolHandlers = {
       currency: args.currency,
     }).format(args.amount);
 
-    // Google Fi split with Georgia
-    if (args.title.toLowerCase().includes("google fi")) {
+    // Google Fi/PG&E split with Georgia
+    const isGeorgiaSplit = args.title.toLowerCase().includes("google fi") ||
+      args.title.toLowerCase().includes("pg&e");
+    if (isGeorgiaSplit) {
       const expenseResponse = await createExpenseWithGeorgia(
-        "Google Fi", args.amount, args.currency);
+        args.title, args.amount, args.currency);
 
       Sentry.logger.info("[6c] Function: Splitwise expense added", {
         expense: expenseResponse.data,
@@ -371,7 +373,7 @@ const toolHandlers = {
 
       return {
         type: "splitwise_expense",
-        text: `Google Fi of ${formattedAmount} added to Splitwise`,
+        text: `${args.title} of ${formattedAmount} added to Splitwise`,
       };
     }
 
