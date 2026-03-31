@@ -17,7 +17,7 @@ npm run deploy  # Deploy to Cloudflare Worker via wrangler
 npm run key     # Manage Cloudflare Worker secrets
 ```
 
-There are no automated tests — `tests/` contains manual scripts run locally with secrets from outside the repo (`../../secrets/guimail.mjs`).
+There are no automated tests — `tests/` contains manual scripts run locally. Never modify files in `tests/`.
 
 ## Architecture
 
@@ -43,7 +43,7 @@ Single exported function `guimail`. Pipeline:
 - `create_calendar_event` — generates an iCal invite string using `ical-generator`; attached to reply as `icalEvent`
 - `summarize_email` — returns the summary text
 - `add_to_budget` — writes to a Google Sheet via service account key file (`service-account-key.json`); also creates a Splitwise expense automatically if the issuer is Capital One
-- `add_to_splitwise` — creates a Splitwise expense via `axiosInstance` (pre-configured with retry logic)
+- `add_to_splitwise` — creates a Splitwise expense via `axiosInstance` (pre-configured with retry logic); bills matching Google Fi or PG&E use `createExpenseWithGeorgia` for an explicit 50/50 split instead of `split_equally`
 
 All tools with data extraction include a `confidence` field; handlers reject calls below 0.5.
 
@@ -60,6 +60,8 @@ All tools with data extraction include a `confidence` field; handlers reject cal
 - Set in the Firebase Console (no `.env` file); available at cold start via `process.env.*`.
 
 **Sentry:** Errors logged to the `guimail` project (`GUIMAIL-*` issue IDs).
+
+**Prompt management**: `functions/prompt.md` is the system prompt that is pushed to Langfuse manually and excluded from regular commits. Always perform changes to the system prompt, but never consider it in the commit message.
 
 ## Code Style
 
