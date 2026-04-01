@@ -36,7 +36,7 @@ Single exported function `guimail`. Pipeline:
 1. Authenticates the request via `Authorization: Bearer <WORKER_SECRET>` header
 2. Parses the raw email body with **PostalMime** (prefers text over HTML)
 3. Fetches the system prompt from **Langfuse** (prompt named `"GuiMail"`)
-4. Calls **Gemini** (`gemini-pro-latest`, `thinkingLevel: "low"`) with forced tool use (`FunctionCallingConfigMode.ANY`)
+4. Calls **Gemini** (`gemini-flash-latest`, `thinkingLevel: "high"`) with forced tool use (`FunctionCallingConfigMode.ANY`)
 5. Executes the chosen tool handler, then sends back the raw RFC 2822 reply message
 
 **Tool handlers** (in `toolHandlers` object):

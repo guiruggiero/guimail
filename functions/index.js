@@ -159,10 +159,10 @@ const addToSplitwise = {
 
 // Model configuration
 const modelConfig = {
-  model: "gemini-pro-latest",
+  model: "gemini-flash-latest",
   config: {
     thinkingConfig: {
-      thinkingLevel: "low",
+      thinkingLevel: "high",
     },
     tools: [{
       functionDeclarations: [
