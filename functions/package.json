@@ -8,9 +8,9 @@
   "private": true,
   "main": "index.js",
   "dependencies": {
-    "@google/genai": "^1.39.0",
-    "@langfuse/client": "^4.5.1",
-    "@sentry/node": "^10.38.0",
+    "@google/genai": "^1.48.0",
+    "@langfuse/client": "^5.0.2",
+    "@sentry/node": "^10.47.0",
     "axios": "^1.13.5",
     "axios-retry": "^4.5.0",
     "firebase-functions": "^7.1.1",
