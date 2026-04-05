@@ -17,6 +17,7 @@ export default defineConfig([
     languageOptions: {globals: globals.node},
     rules: {
       "no-unused-vars": "warn",
+      "no-useless-assignment": "warn",
       "@stylistic/indent": ["warn", 4],
       "@stylistic/semi": "error",
       "@stylistic/no-extra-semi": "warn",

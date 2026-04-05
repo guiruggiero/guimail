@@ -17,7 +17,7 @@ npm run deploy  # Deploy to Cloudflare Worker via wrangler
 npm run key     # Manage Cloudflare Worker secrets
 ```
 
-There are no automated tests — `tests/` contains manual scripts run locally. Never modify files in `tests/`.
+Never modify files in `tests/` — these are manual scripts for local use only.
 
 ## Architecture
 

@@ -27,6 +27,7 @@ export default defineConfig([
       "no-restricted-globals": ["error", "name", "length"],
       "prefer-arrow-callback": "error",
       "quotes": ["error", "double", {allowTemplateLiterals: true}],
+      "no-unused-vars": "warn",
       "no-useless-assignment": "warn",
       "indent": ["error", 2],
     },
