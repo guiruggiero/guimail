@@ -53,8 +53,9 @@ export const handler = async (args) => {
   }).format(args.amount);
 
   // Google Fi/PG&E split with Georgia
-  const isGeorgiaSplit = args.title.toLowerCase().includes("google fi") ||
-    args.title.toLowerCase().includes("pg&e");
+  const titleLower = args.title.toLowerCase();
+  const isGeorgiaSplit = titleLower.includes("google fi") ||
+    titleLower.includes("pg&e");
   if (isGeorgiaSplit) {
     const expenseResponse = await createExpenseWithGeorgia(
       args.title, args.amount, args.currency);

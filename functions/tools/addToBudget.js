@@ -8,6 +8,35 @@ import {createExpenseWithGeorgia} from "../utils/splitwise.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Mapping of issuers and row numbers
+const issuerToRow = {
+  "Chase": "2",
+  "Capital One": "3",
+  "Amex": "4",
+  "Discover": "5",
+};
+
+// Lazy-initialized Google Sheets client
+let sheetsClient;
+const getSheetsClient = async () => {
+  if (sheetsClient) return sheetsClient;
+  const auth = new google.auth.GoogleAuth({
+    keyFile: path.join(__dirname, "..", "service-account-key.json"),
+    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+  });
+  sheetsClient = google.sheets({
+    version: "v4",
+    auth,
+    retryConfig: {
+      retry: 2,
+      retryDelay: 1000,
+      statusCodesToRetry: [[500, 599]],
+      httpMethodsToRetry: ["POST"],
+    },
+  });
+  return sheetsClient;
+};
+
 export const definition = {
   name: "add_to_budget",
   description: "Adds a credit card statement balance to the budget" +
@@ -46,20 +75,8 @@ export const handler = async (args) => {
     throw new Error(`Low confidence: ${args.confidence}`);
   }
 
-  // Create authenticated Google Sheets client
-  const auth = new google.auth.GoogleAuth({
-    keyFile: path.join(__dirname, "..", "service-account-key.json"),
-    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-  });
-  const sheets = google.sheets({version: "v4", auth});
-
-  // Mapping of issuers and row numbers
-  const issuerToRow = {
-    "Chase": "2",
-    "Capital One": "3",
-    "Amex": "4",
-    "Discover": "5",
-  };
+  // Get cached Google Sheets client
+  const sheets = await getSheetsClient();
 
   // Update multiple cells at once
   await sheets.spreadsheets.values.batchUpdate({
