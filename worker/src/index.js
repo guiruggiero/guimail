@@ -39,7 +39,7 @@ export default Sentry.withSentry(
                     env.EMAIL_GUI,
                     env.EMAIL_GUI_AUTO_FWD,
                     env.EMAIL_UM,
-                    // env.EMAIL_GEORGIA,
+                    env.EMAIL_GEORGIA,
                     // env.EMAIL_PANDA,
                 ].filter(Boolean).map(sender => sender.toLowerCase())); // Forced lowercase
             }
@@ -50,7 +50,7 @@ export default Sentry.withSentry(
                 Sentry.logger.warn("Worker: sender not allowed", {from});
                 ctx.waitUntil(Sentry.flush(2000));
 
-                message.setReject("You're not a GuiMail user yet! Please, reach out to Gui at https://guiruggiero.com.");
+                message.setReject("You're not a Guimail user yet! Please, reach out to Gui at https://guiruggiero.com.");
                 return;
             }
             Sentry.logger.info("[2] Worker: message from", {from});
@@ -61,7 +61,7 @@ export default Sentry.withSentry(
                 Sentry.logger.warn("Worker: email too large", {rawSize});
                 ctx.waitUntil(Sentry.flush(2000));
 
-                message.setReject("This was too large for GuiMail. Delete something (an attachment?) and try again, please.");
+                message.setReject("This was too large for Guimail. Delete something (an attachment?) and try again, please.");
                 return;
             }
 
@@ -72,7 +72,7 @@ export default Sentry.withSentry(
             const references = message.headers.get("References");
             Sentry.logger.info("[3] Worker: message subject", {subject});
 
-            // Call GuiMail
+            // Call Guimail
             let response;
             try {
                 response = await axiosInstance.post("", rawBody, {
@@ -85,8 +85,8 @@ export default Sentry.withSentry(
                 Sentry.logger.info("[10] Worker: function call successful");
 
             } catch (error) {
-                // GuiMail responded with status 4xx or 5xx
-                if (error.response) Sentry.logger.warn("Worker: GuiMail failed", {
+                // Guimail responded with status 4xx or 5xx
+                if (error.response) Sentry.logger.warn("Worker: Guimail failed", {
                     status: error.response.status,
                     data: error.response?.data,
                 });

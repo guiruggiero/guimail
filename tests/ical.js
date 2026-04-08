@@ -1,7 +1,7 @@
 const {default: ical} = require("ical-generator");
 
 // Create iCal invite
-const cal = ical({prodId: "//Gui Ruggiero//GuiMail//EN"});
+const cal = ical({prodId: "//Gui Ruggiero//Guimail//EN"});
 cal.createEvent({
     start: new Date("2025-10-15T08:00:00"),
     end: new Date("2025-10-15T09:00:00"),
@@ -18,7 +18,7 @@ console.log(icsString);
 
 // BEGIN:VCALENDAR
 // VERSION:2.0
-// PRODID:-//GuiRuggiero//GuiMail//EN
+// PRODID:-//GuiRuggiero//Guimail//EN
 // BEGIN:VEVENT
 // UID:6cdca342-82f1-415d-946a-d3243bef5aa0
 // SEQUENCE:0

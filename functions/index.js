@@ -228,7 +228,7 @@ const createExpenseWithGeorgia = async (description, amount, currency) => {
   const expenseResponse = await axiosInstance.post("/create_expense", {
     cost: cost,
     description: description,
-    details: "Created with GuiMail",
+    details: "Created with Guimail",
     currency_code: currency,
     group_id: 0, // Direct expense between users
     users__0__user_id: process.env.SPLITWISE_GUI_ID,
@@ -252,13 +252,13 @@ const toolHandlers = {
     }
 
     // Create iCal invite
-    const cal = ical({prodId: "//Gui Ruggiero//GuiMail//EN"});
+    const cal = ical({prodId: "//Gui Ruggiero//Guimail//EN"});
     cal.createEvent({
       start: new Date(args.start),
       end: new Date(args.end),
       timezone: args.timeZone,
       summary: args.summary,
-      description: (args.description ?? "") + "\n\nCreated with GuiMail",
+      description: (args.description ?? "") + "\n\nCreated with Guimail",
       location: args.location,
     });
     const icsString = cal.toString();
@@ -381,7 +381,7 @@ const toolHandlers = {
     const expenseResponse = await axiosInstance.post("/create_expense", {
       cost: args.amount.toFixed(2),
       description: args.title,
-      details: args.details + "\n\nCreated with GuiMail",
+      details: args.details + "\n\nCreated with Guimail",
       currency_code: args.currency,
       group_id: 0, // Direct expense between users
       split_equally: true,
@@ -454,7 +454,7 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
   // Get model prompt
   let instructions;
   try {
-    const promptResponse = await langfuse.prompt.get("GuiMail");
+    const promptResponse = await langfuse.prompt.get("Guimail");
     instructions = promptResponse.prompt;
 
     Sentry.logger.info("[6] Function: prompt fetched", {
@@ -539,12 +539,12 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
 
     // Base message configuration
     const replyConfig = {
-      from: `"GuiMail" <${process.env.EMAIL_GUIMAIL}>`,
+      from: `"Guimail" <${process.env.EMAIL_GUIMAIL}>`,
       to: from,
       subject,
       inReplyTo: messageID,
       references: newReferences,
-      text: `${toolResult.text}\n\nThank you for using GuiMail!`,
+      text: `${toolResult.text}\n\nThank you for using Guimail!`,
     };
 
     // Add iCal if this was a calendar event

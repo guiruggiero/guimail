@@ -190,8 +190,8 @@ const modelConfig = {
   let icsString = "";
   // try {
     const cal = ical({
-      name: "GuiMail",
-      prodId: "//GuiRuggiero//GuiMail//EN",
+      name: "Guimail",
+      prodId: "//GuiRuggiero//Guimail//EN",
     });
     cal.createEvent({
       start: new Date(eventData.start),
@@ -226,13 +226,13 @@ const modelConfig = {
 
     // Construct message object
     const reply = new MailComposer({
-      from: `"GuiMail" <${EMAIL_GUIMAIL}>`,
+      from: `"Guimail" <${EMAIL_GUIMAIL}>`,
       to: from,
       subject,
       inReplyTo: messageID,
       references: newReferences,
       text: `Event created. Confidence = ${eventData.confidence}.\n\n` +
-        "Thank you for using GuiMail!",
+        "Thank you for using Guimail!",
       icalEvent: {
         method: "REQUEST",
         content: icsString,

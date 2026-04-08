@@ -35,7 +35,7 @@ async function createExpense(description, amount) {
     // const expense = {
     //     cost: amount.toFixed(2),
     //     description: description,
-    //     details: "Created via GuiMail",
+    //     details: "Created via Guimail",
     //     currency_code: "USD",
     //     group_id: 0, // Direct expense between users
     //     users__0__user_id: SPLITWISE_GUI_ID,
@@ -50,7 +50,7 @@ async function createExpense(description, amount) {
     const expense = {
         cost: amount.toFixed(2),
         description: description,
-        details: "Created via GuiMail",
+        details: "Created via Guimail",
         currency_code: "USD",
         group_id: 0, // Direct expense between users
         split_equally: true,
@@ -79,7 +79,7 @@ createExpense("Test", 10);
 //       email_reminder: false,
 //       email_reminder_in_advance: -1,
 //       next_repeat: null,
-//       details: 'Created via GuiMail',
+//       details: 'Created via Guimail',
 //       comments_count: 0,
 //       payment: false,
 //       creation_method: null,

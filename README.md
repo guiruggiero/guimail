@@ -3,9 +3,9 @@
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=guiruggiero_guimail&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=guiruggiero_guimail)
 [![Dependencies](https://github.com/guiruggiero/guimail/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/guiruggiero/guimail/actions/workflows/dependabot/dependabot-updates)
 
-# 📧 GuiMail
+# 📧 Guimail
 
-An intelligent multi-purpose email processing AI agent. Forward any email to GuiMail and it will automatically:
+An intelligent multi-purpose email processing AI agent. Forward any email to Guimail and it will automatically:
 
 - 📅 **Extract calendar events** - Get iCal invitations for meetings, appointments, or any event (in-person or virtual) and add to the calendar with one tap/click
 - 📝 **Summarize content** - Receive concise summaries of long emails, newsletters, and threads
