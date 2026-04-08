@@ -31,19 +31,21 @@ Receives emails via Cloudflare Email Routing. Pipeline:
 4. POSTs the raw email body (octet stream) to the Firebase Cloud Function with `WORKER_SECRET` auth and metadata as query params
 5. Sends the raw RFC 2822 reply from the function back to the sender via `message.reply()`
 
-### Firebase Cloud Function (`functions/index.js`)
-Single exported function `guimail`. Pipeline:
+### Firebase Cloud Function (`functions/`)
+Single exported function `guimail` in `index.js`. Pipeline:
 1. Authenticates the request via `Authorization: Bearer <WORKER_SECRET>` header
 2. Parses the raw email body with **PostalMime** (prefers text over HTML)
 3. Fetches the system prompt from **Langfuse** (prompt named `"Guimail"`)
 4. Calls **Gemini** (`gemini-flash-latest`, `thinkingLevel: "high"`) with forced tool use (`FunctionCallingConfigMode.ANY`)
 5. Executes the chosen tool handler, then sends back the raw RFC 2822 reply message
 
-**Tool handlers** (in `toolHandlers` object):
+**Tool handlers** (each in `functions/tools/`, assembled into `toolHandlers` in `index.js`):
 - `create_calendar_event` — generates an iCal invite string using `ical-generator`; attached to reply as `icalEvent`
 - `summarize_email` — returns the summary text
-- `add_to_budget` — writes to a Google Sheet via service account key file (`service-account-key.json`); also creates a Splitwise expense automatically if the issuer is Capital One
+- `add_to_budget` — writes to a Google Sheet via a lazily-initialized cached client (`service-account-key.json`); also creates a Splitwise expense automatically if the issuer is Capital One
 - `add_to_splitwise` — creates a Splitwise expense via `axiosInstance` (pre-configured with retry logic); bills matching Google Fi or PG&E use `createExpenseWithGeorgia` for an explicit 50/50 split instead of `split_equally`
+
+**Shared Splitwise utilities** (axios client, retry config, `checkSplitwiseError`, `splitHalf`, `createExpenseWithGeorgia`) live in `functions/utils/splitwise.js`.
 
 All tools with data extraction include a `confidence` field; handlers reject calls below 0.5.
 

@@ -1,16 +1,26 @@
 // Imports
 import * as Sentry from "@sentry/node";
-import {GoogleGenAI, Type, FunctionCallingConfigMode} from "@google/genai";
+import {GoogleGenAI, FunctionCallingConfigMode} from "@google/genai";
 import {LangfuseClient} from "@langfuse/client";
-import {fileURLToPath} from "node:url";
 import {onRequest} from "firebase-functions/v2/https";
 import PostalMime from "postal-mime";
-import ical from "ical-generator";
-import {google} from "googleapis";
-import path from "node:path";
-import axios from "axios";
-import axiosRetry from "axios-retry";
 import MailComposer from "nodemailer/lib/mail-composer/index.js";
+import {
+  definition as calendarEventDef,
+  handler as calendarEventHandler,
+} from "./tools/calendarEvent.js";
+import {
+  definition as summarizeEmailDef,
+  handler as summarizeEmailHandler,
+} from "./tools/summarizeEmail.js";
+import {
+  definition as addToBudgetDef,
+  handler as addToBudgetHandler,
+} from "./tools/addToBudget.js";
+import {
+  definition as addToSplitwiseDef,
+  handler as addToSplitwiseHandler,
+} from "./tools/addToSplitwise.js";
 
 // Initializations
 Sentry.init({
@@ -28,134 +38,6 @@ const langfuse = new LangfuseClient({
   publicKey: process.env.LANGFUSE_PUBLIC_KEY,
   baseUrl: "https://us.cloud.langfuse.com",
 });
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Model tools
-const createCalendarEvent = {
-  name: "create_calendar_event",
-  description: "Creates a calendar event with details extracted from the" +
-    " email message including title and time, location, and description",
-  parameters: {
-    type: Type.OBJECT,
-    properties: {
-      summary: {
-        type: Type.STRING,
-        description: "Event title/name, max 7 words",
-      },
-      start: {
-        type: Type.STRING,
-        description: "Event start date and time in" +
-          " ISO-8601 format (YYYY-MM-DDTHH:MM:SS)",
-      },
-      end: {
-        type: Type.STRING,
-        description: "Event end date and time in" +
-          " ISO-8601 format (YYYY-MM-DDTHH:MM:SS)",
-      },
-      timeZone: {
-        type: Type.STRING,
-        description: "Event time zone in" +
-          " IANA identifier (e.g., 'America/Los_Angeles')",
-      },
-      location: {
-        type: Type.STRING,
-        description: "Event location, be it physical or virtual",
-      },
-      description: {
-        type: Type.STRING,
-        description: "Additional details of the event," +
-          " followed by the email subject line",
-      },
-      confidence: {
-        type: Type.NUMBER,
-        description: "Confidence score between 0 and 1 indicating" +
-          " certainty of the data extraction (e.g., '0.85')",
-      },
-    },
-    required: ["summary", "start", "end", "timeZone", "confidence"],
-  },
-};
-const summarizeEmail = {
-  name: "summarize_email",
-  description: "Creates a concise summary of the email content" +
-    " in a single paragraph",
-  parameters: {
-    type: Type.OBJECT,
-    properties: {
-      summary: {
-        type: Type.STRING,
-        description: "A concise paragraph summarizing the key points" +
-          " or action items from the email",
-      },
-    },
-    required: ["summary"],
-  },
-};
-const addToBudget = {
-  name: "add_to_budget",
-  description: "Adds a credit card statement balance to the budget" +
-    " spreadsheet",
-  parameters: {
-    type: Type.OBJECT,
-    properties: {
-      issuer: {
-        type: Type.STRING,
-        enum: ["Chase", "Capital One", "Amex", "Discover"],
-        description: "Credit card issuer name",
-      },
-      balance: {
-        type: Type.NUMBER,
-        description: "Credit card statement balance without currency sign" +
-          " (e.g., 127.43)",
-      },
-      currency: {
-        type: Type.STRING,
-        enum: ["USD", "EUR", "BRL"],
-        description: "Credit card statement balance currency",
-      },
-      confidence: {
-        type: Type.NUMBER,
-        description: "Confidence score between 0 and 1 indicating" +
-          " certainty of the data extraction (e.g., '0.85')",
-      },
-    },
-    required: ["issuer", "balance", "currency", "confidence"],
-  },
-};
-const addToSplitwise = {
-  name: "add_to_splitwise",
-  description: "Adds an expense to Splitwise to be shared with other people",
-  parameters: {
-    type: Type.OBJECT,
-    properties: {
-      title: { // Splitwise `description`
-        type: Type.STRING,
-        description: "Short expense title, max 5 words",
-      },
-      amount: { // Splitwise `cost`
-        type: Type.NUMBER,
-        description: "Expense amount without currency sign (e.g., 127.43)",
-      },
-      currency: {
-        type: Type.STRING,
-        enum: ["USD", "EUR", "BRL"],
-        description: "Expense currency",
-      },
-      details: {
-        type: Type.STRING,
-        description: "Summary of all other expense information, including " +
-          "the people involved (e.g., 'Share with: Georgia, Panda, and Ma')",
-      },
-      confidence: {
-        type: Type.NUMBER,
-        description: "Confidence score between 0 and 1 indicating" +
-          " certainty of the data extraction (e.g., '0.85')",
-      },
-    },
-    required: ["title", "amount", "currency", "details", "confidence"],
-  },
-};
 
 // Model configuration
 const modelConfig = {
@@ -166,10 +48,10 @@ const modelConfig = {
     },
     tools: [{
       functionDeclarations: [
-        createCalendarEvent,
-        summarizeEmail,
-        addToBudget,
-        addToSplitwise,
+        calendarEventDef,
+        summarizeEmailDef,
+        addToBudgetDef,
+        addToSplitwiseDef,
       ],
     }],
     toolConfig: {
@@ -180,221 +62,12 @@ const modelConfig = {
   },
 };
 
-// Axios instance for Splitwise
-const axiosInstance = axios.create({
-  baseURL: "https://secure.splitwise.com/api/v3.0",
-  timeout: 10000, // 10s
-  headers: {"Authorization": `Bearer ${process.env.SPLITWISE_API_KEY}`},
-});
-
-// Retry configuration
-axiosRetry(axiosInstance, {
-  retries: 2, // Retry attempts
-  retryDelay: axiosRetry.exponentialDelay, // 1s then 2s between retries
-  // Only retry on network or 5xx errors
-  retryCondition: (error) => {
-    return axiosRetry.isNetworkOrIdempotentRequestError(error) ||
-      (error.response && error.response.status >= 500);
-  },
-});
-
-// Splitwise error checker
-const checkSplitwiseError = (expenseData) => {
-  const {error, errors} = expenseData;
-
-  if (error) throw new Error(`Splitwise API: ${error}`); // {error: ""}
-
-  if (errors && Object.keys(errors).length > 0) { // {errors: {base: [""]}}
-    const errorMessage = Object.values(errors).flat().join(", ");
-    throw new Error(`Splitwise API: ${errorMessage}`);
-  }
-};
-
-// Split calculator for 50/50 expenses
-const splitHalf = (amount) => {
-  const costCents = Math.round(amount * 100);
-  const halfCents = Math.floor(costCents / 2);
-  return {
-    cost: (costCents / 100).toFixed(2),
-    halfShare: (halfCents / 100).toFixed(2),
-    remainderShare: ((costCents - halfCents) / 100).toFixed(2),
-  };
-};
-
-// Creator for expenses with Georgia
-const createExpenseWithGeorgia = async (description, amount, currency) => {
-  const {cost, halfShare, remainderShare} = splitHalf(amount);
-
-  const expenseResponse = await axiosInstance.post("/create_expense", {
-    cost: cost,
-    description: description,
-    details: "Created with Guimail",
-    currency_code: currency,
-    group_id: 0, // Direct expense between users
-    users__0__user_id: process.env.SPLITWISE_GUI_ID,
-    users__0__paid_share: cost,
-    users__0__owed_share: halfShare,
-    users__1__user_id: process.env.SPLITWISE_GEORGIA_ID,
-    users__1__paid_share: "0",
-    users__1__owed_share: remainderShare,
-  });
-  checkSplitwiseError(expenseResponse.data);
-
-  return expenseResponse;
-};
-
 // Tool handlers
 const toolHandlers = {
-  create_calendar_event: async (args) => {
-    // Validate confidence threshold
-    if (args.confidence < 0.5) {
-      throw new Error(`Low confidence: ${args.confidence}`);
-    }
-
-    // Create iCal invite
-    const cal = ical({prodId: "//Gui Ruggiero//Guimail//EN"});
-    cal.createEvent({
-      start: new Date(args.start),
-      end: new Date(args.end),
-      timezone: args.timeZone,
-      summary: args.summary,
-      description: (args.description ?? "") + "\n\nCreated with Guimail",
-      location: args.location,
-    });
-    const icsString = cal.toString();
-
-    return {
-      type: "calendar_event",
-      text: `Event created. Confidence = ${args.confidence * 100}%`,
-      icalEvent: {
-        method: "REQUEST",
-        content: icsString,
-      },
-    };
-  },
-
-  summarize_email: async (args) => {
-    return {
-      type: "summary",
-      text: `Email summary:\n\n${args.summary}`,
-    };
-  },
-
-  add_to_budget: async (args) => {
-    // Validate confidence threshold
-    if (args.confidence < 0.5) {
-      throw new Error(`Low confidence: ${args.confidence}`);
-    }
-
-    // Create authenticated Google Sheets client
-    const auth = new google.auth.GoogleAuth({
-      keyFile: path.join(__dirname, "service-account-key.json"),
-      scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-    });
-    const sheets = google.sheets({version: "v4", auth});
-
-    // Mapping of issuers and row numbers
-    const issuerToRow = {
-      "Chase": "2",
-      "Capital One": "3",
-      "Amex": "4",
-      "Discover": "5",
-    };
-
-    // Update multiple cells at once
-    await sheets.spreadsheets.values.batchUpdate({
-      spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      resource: {
-        valueInputOption: "USER_ENTERED", // Data interpreted as if user typed
-        data: [
-          {
-            range: `Y${issuerToRow[args.issuer]}`,
-            values: [[args.balance]], // Must be in a 2D array
-          },
-          {
-            range: `Z${issuerToRow[args.issuer]}`,
-            values: [[new Date().toLocaleString("en-US", {timeZone: "CET"})]],
-          },
-        ],
-      },
-    });
-    Sentry.logger.info("[6a] Function: Google Sheet updated");
-
-    // Format balance for display
-    const formattedBalance = new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: args.currency,
-    }).format(args.balance);
-
-    // Build response text
-    let responseText = `${args.issuer} balance of ${formattedBalance} ` +
-      `added to budget spreadsheet\nConfidence = ${args.confidence * 100}%`;
-
-    // Add to Splitwise
-    if (args.issuer === "Capital One") {
-      const expenseResponse = await createExpenseWithGeorgia(
-        "Capital One", args.balance, args.currency);
-
-      Sentry.logger.info("[6b] Function: Splitwise expense added", {
-        expense: expenseResponse.data,
-      });
-
-      responseText += "\n\nExpense also added to Splitwise";
-    }
-
-    return {
-      type: "budget_update",
-      text: responseText,
-    };
-  },
-
-  add_to_splitwise: async (args) => {
-    // Validate confidence threshold
-    if (args.confidence < 0.5) {
-      throw new Error(`Low confidence: ${args.confidence}`);
-    }
-
-    // Format amount for display
-    const formattedAmount = new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: args.currency,
-    }).format(args.amount);
-
-    // Google Fi/PG&E split with Georgia
-    const isGeorgiaSplit = args.title.toLowerCase().includes("google fi") ||
-      args.title.toLowerCase().includes("pg&e");
-    if (isGeorgiaSplit) {
-      const expenseResponse = await createExpenseWithGeorgia(
-        args.title, args.amount, args.currency);
-
-      Sentry.logger.info("[6c] Function: Splitwise expense added", {
-        expense: expenseResponse.data,
-      });
-
-      return {
-        type: "splitwise_expense",
-        text: `${args.title} of ${formattedAmount} added to Splitwise`,
-      };
-    }
-
-    // Add expense on Splitwise
-    const expenseResponse = await axiosInstance.post("/create_expense", {
-      cost: args.amount.toFixed(2),
-      description: args.title,
-      details: args.details + "\n\nCreated with Guimail",
-      currency_code: args.currency,
-      group_id: 0, // Direct expense between users
-      split_equally: true,
-    });
-    checkSplitwiseError(expenseResponse.data);
-
-    return {
-      type: "splitwise_expense",
-      text: `"${args.title}" of ${formattedAmount} added to ` +
-        `Splitwise. Details:\n\n${args.details}\n\nConfidence = ` +
-        `${args.confidence * 100}%`,
-    };
-  },
+  [calendarEventDef.name]: calendarEventHandler,
+  [summarizeEmailDef.name]: summarizeEmailHandler,
+  [addToBudgetDef.name]: addToBudgetHandler,
+  [addToSplitwiseDef.name]: addToSplitwiseHandler,
 };
 
 // Firebase function configuration
@@ -424,7 +97,9 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
   }
 
   // Extract information from request
-  const {from, subject: originalSubject, messageID, references} = request.query;
+  const {
+    from, subject: originalSubject, messageID, references,
+  } = request.query;
   const raw = request.rawBody;
 
   // Extract body from message
