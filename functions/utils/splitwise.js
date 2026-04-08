@@ -1,4 +1,4 @@
-// Shared Splitwise utilities
+// Imports
 import axios from "axios";
 import axiosRetry from "axios-retry";
 

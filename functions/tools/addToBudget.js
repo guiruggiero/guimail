@@ -1,3 +1,4 @@
+// Imports
 import * as Sentry from "@sentry/node";
 import {Type} from "@google/genai";
 import {google} from "googleapis";
@@ -5,6 +6,7 @@ import {fileURLToPath} from "node:url";
 import path from "node:path";
 import {createExpenseWithGeorgia} from "../utils/splitwise.js";
 
+// ESM path resolution (needed for service-account-key.json)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -97,7 +99,7 @@ export const handler = async (args) => {
       ],
     },
   });
-  Sentry.logger.info("[6a] Function: Google Sheet updated");
+  Sentry.logger.info("[8a] Function: Google Sheet updated");
 
   // Format balance for display
   const formattedBalance = new Intl.NumberFormat("en-US", {
@@ -106,15 +108,16 @@ export const handler = async (args) => {
   }).format(args.balance);
 
   // Build response text
+  const confidence = Math.round(args.confidence * 100);
   let responseText = `${args.issuer} balance of ${formattedBalance} ` +
-    `added to budget spreadsheet\nConfidence = ${args.confidence * 100}%`;
+    `added to budget spreadsheet\nConfidence = ${confidence}%`;
 
   // Add to Splitwise
   if (args.issuer === "Capital One") {
     const expenseResponse = await createExpenseWithGeorgia(
       "Capital One", args.balance, args.currency);
 
-    Sentry.logger.info("[6b] Function: Splitwise expense added", {
+    Sentry.logger.info("[8b] Function: Splitwise expense added", {
       expense: expenseResponse.data,
     });
 

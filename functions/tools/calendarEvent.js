@@ -1,5 +1,6 @@
-import ical from "ical-generator";
+// Imports
 import {Type} from "@google/genai";
+import ical from "ical-generator";
 
 export const definition = {
   name: "create_calendar_event",
@@ -66,7 +67,7 @@ export const handler = async (args) => {
 
   return {
     type: "calendar_event",
-    text: `Event created. Confidence = ${args.confidence * 100}%`,
+    text: `Event created. Confidence = ${Math.round(args.confidence * 100)}%`,
     icalEvent: {
       method: "REQUEST",
       content: icsString,

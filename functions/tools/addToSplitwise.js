@@ -1,3 +1,4 @@
+// Imports
 import * as Sentry from "@sentry/node";
 import {Type} from "@google/genai";
 import {
@@ -60,13 +61,14 @@ export const handler = async (args) => {
     const expenseResponse = await createExpenseWithGeorgia(
       args.title, args.amount, args.currency);
 
-    Sentry.logger.info("[6c] Function: Splitwise expense added", {
+    Sentry.logger.info("[8c] Function: Splitwise expense added", {
       expense: expenseResponse.data,
     });
 
     return {
       type: "splitwise_expense",
-      text: `${args.title} of ${formattedAmount} added to Splitwise`,
+      text: `"${args.title}" of ${formattedAmount} added to Splitwise. ` +
+        `Confidence = ${Math.round(args.confidence * 100)}%`,
     };
   }
 
@@ -80,11 +82,14 @@ export const handler = async (args) => {
     split_equally: true,
   });
   checkSplitwiseError(expenseResponse.data);
+  Sentry.logger.info("[8d] Function: Splitwise expense added", {
+    expense: expenseResponse.data,
+  });
 
   return {
     type: "splitwise_expense",
     text: `"${args.title}" of ${formattedAmount} added to ` +
       `Splitwise. Details:\n\n${args.details}\n\nConfidence = ` +
-      `${args.confidence * 100}%`,
+      `${Math.round(args.confidence * 100)}%`,
   };
 };

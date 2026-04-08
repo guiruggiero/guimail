@@ -1,3 +1,4 @@
+// Imports
 import {Type} from "@google/genai";
 
 export const definition = {

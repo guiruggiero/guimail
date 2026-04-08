@@ -54,7 +54,7 @@ All tools with data extraction include a `confidence` field; handlers reject cal
 **HTTP status code contract**: the function returns `502` for retryable errors (Gemini, Langfuse, Sheets API) and `500` for deterministic/post-write errors; the worker retries on `> 500` only.
 
 **Required env vars (Worker):**
-- `SENTRY_DSN`, `WORKER_SECRET`, `EMAIL_GUIMAIL`, `EMAIL_GUI`, `EMAIL_GUI_AUTO_FWD`, `EMAIL_UM`
+- `SENTRY_DSN`, `WORKER_SECRET`, `EMAIL_GUIMAIL`, `EMAIL_GUI`, `EMAIL_GUI_AUTO_FWD`, `EMAIL_UM`, `EMAIL_GEORGIA`
 - Set as Cloudflare Worker secrets via `npm run key`.
 
 **Required env vars (Firebase):**
