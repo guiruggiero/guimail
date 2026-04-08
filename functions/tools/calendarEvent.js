@@ -1,6 +1,6 @@
 // Imports
 import {Type} from "@google/genai";
-import ical from "ical-generator";
+import ical, {ICalEventTransparency} from "ical-generator";
 
 export const definition = {
   name: "create_calendar_event",
@@ -15,13 +15,13 @@ export const definition = {
       },
       start: {
         type: Type.STRING,
-        description: "Event start date and time in" +
-          " ISO-8601 format (YYYY-MM-DDTHH:MM:SS)",
+        description: "Event start: date-only (YYYY-MM-DD) for all-day" +
+          " events, or date and time (YYYY-MM-DDTHH:MM:SS) for timed events",
       },
       end: {
         type: Type.STRING,
-        description: "Event end date and time in" +
-          " ISO-8601 format (YYYY-MM-DDTHH:MM:SS)",
+        description: "Event end: date-only (YYYY-MM-DD) for all-day" +
+          " events, or date and time (YYYY-MM-DDTHH:MM:SS) for timed events",
       },
       timeZone: {
         type: Type.STRING,
@@ -54,6 +54,7 @@ export const handler = async (args) => {
   }
 
   // Create iCal invite
+  const isAllDay = !args.start.includes("T");
   const cal = ical({prodId: "//Gui Ruggiero//Guimail//EN"});
   cal.createEvent({
     start: new Date(args.start),
@@ -62,6 +63,11 @@ export const handler = async (args) => {
     summary: args.summary,
     description: (args.description ?? "") + "\n\nCreated with Guimail",
     location: args.location,
+    allDay: isAllDay,
+    // All-day events show as free; timed events show as busy
+    transparency: isAllDay ?
+      ICalEventTransparency.TRANSPARENT :
+      ICalEventTransparency.OPAQUE,
   });
   const icsString = cal.toString();
 

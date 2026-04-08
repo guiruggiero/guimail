@@ -40,7 +40,7 @@ Single exported function `guimail` in `index.js`. Pipeline:
 5. Executes the chosen tool handler, then sends back the raw RFC 2822 reply message
 
 **Tool handlers** (each in `functions/tools/`, assembled into `toolHandlers` in `index.js`):
-- `create_calendar_event` — generates an iCal invite string using `ical-generator`; attached to reply as `icalEvent`
+- `create_calendar_event` — generates an iCal invite string using `ical-generator`; attached to reply as `icalEvent`; timed events use `TRANSP:OPAQUE` (busy), all-day events use `TRANSP:TRANSPARENT` (free) with `allDay: true`; all-day is detected by the absence of `T` in the `start` string
 - `summarize_email` — returns the summary text
 - `add_to_budget` — writes to a Google Sheet via a lazily-initialized cached client (`service-account-key.json`); also creates a Splitwise expense automatically if the issuer is Capital One
 - `add_to_splitwise` — creates a Splitwise expense via `axiosInstance` (pre-configured with retry logic); bills matching Google Fi or PG&E use `createExpenseWithGeorgia` for an explicit 50/50 split instead of `split_equally`
