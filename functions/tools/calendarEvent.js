@@ -9,13 +9,10 @@ import path from "node:path";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Calendar IDs
-const SHARED_CAL_ID =
-  "c8c3104dcce77c7b1269f5bb8add2ac477c43d5eef42fbe828d41352aa0c854a" +
-  "@group.calendar.google.com";
+// Calendar IDs (set in Firebase env vars)
 const CALENDARS = {
-  default: "guilherme.ruggiero@gmail.com",
-  shared: SHARED_CAL_ID,
+  default: process.env.GOOGLE_CAL_DEFAULT_ID,
+  shared: process.env.GOOGLE_CAL_SHARED_ID,
 };
 
 // Lazy-initialized Google Calendar client
@@ -26,7 +23,16 @@ const getCalendarClient = async () => {
     keyFile: path.join(__dirname, "..", "service-account-key.json"),
     scopes: ["https://www.googleapis.com/auth/calendar.events"],
   });
-  calendarClient = google.calendar({version: "v3", auth});
+  calendarClient = google.calendar({
+    version: "v3",
+    auth,
+    retryConfig: {
+      retry: 2,
+      retryDelay: 1000,
+      statusCodesToRetry: [[500, 599]],
+      httpMethodsToRetry: ["POST"],
+    },
+  });
   return calendarClient;
 };
 

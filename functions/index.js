@@ -224,9 +224,6 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
 
     // Add clickable Calendar link for calendar events
     if (toolResult.link) {
-      replyConfig.text = `${toolResult.text}\n\n` +
-        `View in Google Calendar: ${toolResult.link}\n\n` +
-        `Thank you for using Guimail!`;
       replyConfig.html =
         `<p>${toolResult.text}</p>` +
         `<p><a href="${toolResult.link}">View in Google Calendar</a></p>` +
