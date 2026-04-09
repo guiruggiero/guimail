@@ -222,9 +222,15 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
       text: `${toolResult.text}\n\nThank you for using Guimail!`,
     };
 
-    // Add iCal if this was a calendar event
-    if (toolResult.icalEvent) {
-      replyConfig.icalEvent = toolResult.icalEvent;
+    // Add clickable Calendar link for calendar events
+    if (toolResult.link) {
+      replyConfig.text = `${toolResult.text}\n\n` +
+        `View in Google Calendar: ${toolResult.link}\n\n` +
+        `Thank you for using Guimail!`;
+      replyConfig.html =
+        `<p>${toolResult.text}</p>` +
+        `<p><a href="${toolResult.link}">View in Google Calendar</a></p>` +
+        `<p>Thank you for using Guimail!</p>`;
     }
 
     // Construct message

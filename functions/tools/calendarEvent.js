@@ -1,6 +1,34 @@
 // Imports
+import * as Sentry from "@sentry/node";
 import {Type} from "@google/genai";
-import ical, {ICalEventTransparency} from "ical-generator";
+import {google} from "googleapis";
+import {fileURLToPath} from "node:url";
+import path from "node:path";
+
+// ESM path resolution (needed for service-account-key.json)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Calendar IDs
+const SHARED_CAL_ID =
+  "c8c3104dcce77c7b1269f5bb8add2ac477c43d5eef42fbe828d41352aa0c854a" +
+  "@group.calendar.google.com";
+const CALENDARS = {
+  default: "guilherme.ruggiero@gmail.com",
+  shared: SHARED_CAL_ID,
+};
+
+// Lazy-initialized Google Calendar client
+let calendarClient;
+const getCalendarClient = async () => {
+  if (calendarClient) return calendarClient;
+  const auth = new google.auth.GoogleAuth({
+    keyFile: path.join(__dirname, "..", "service-account-key.json"),
+    scopes: ["https://www.googleapis.com/auth/calendar.events"],
+  });
+  calendarClient = google.calendar({version: "v3", auth});
+  return calendarClient;
+};
 
 export const definition = {
   name: "create_calendar_event",
@@ -37,13 +65,21 @@ export const definition = {
         description: "Additional details of the event," +
           " followed by the email subject line",
       },
+      calendar: {
+        type: Type.STRING,
+        enum: ["default", "shared"],
+        description: "Calendar to add the event to: 'default' for Gui's" +
+          " personal calendar, 'shared' for the calendar shared with Georgia",
+      },
       confidence: {
         type: Type.NUMBER,
         description: "Confidence score between 0 and 1 indicating" +
           " certainty of the data extraction (e.g., '0.85')",
       },
     },
-    required: ["summary", "start", "end", "timeZone", "confidence"],
+    required: [
+      "summary", "start", "end", "timeZone", "calendar", "confidence",
+    ],
   },
 };
 
@@ -53,30 +89,46 @@ export const handler = async (args) => {
     throw new Error(`Low confidence: ${args.confidence}`);
   }
 
-  // Create iCal invite
+  // Get cached Google Calendar client
+  const calendar = await getCalendarClient();
+
+  // Build event resource
   const isAllDay = !args.start.includes("T");
-  const cal = ical({prodId: "//Gui Ruggiero//Guimail//EN"});
-  cal.createEvent({
-    start: new Date(args.start),
-    end: new Date(args.end),
-    timezone: args.timeZone,
+  const eventResource = {
     summary: args.summary,
     description: (args.description ?? "") + "\n\nCreated with Guimail",
     location: args.location,
-    allDay: isAllDay,
     // All-day events show as free; timed events show as busy
-    transparency: isAllDay ?
-      ICalEventTransparency.TRANSPARENT :
-      ICalEventTransparency.OPAQUE,
+    transparency: isAllDay ? "transparent" : "opaque",
+  };
+
+  if (isAllDay) {
+    eventResource.start = {date: args.start};
+    eventResource.end = {date: args.end};
+  } else {
+    eventResource.start = {dateTime: args.start, timeZone: args.timeZone};
+    eventResource.end = {dateTime: args.end, timeZone: args.timeZone};
+  }
+
+  // Create event via Google Calendar API
+  const calendarId = CALENDARS[args.calendar ?? "default"];
+  const result = await calendar.events.insert({
+    calendarId,
+    resource: eventResource,
   });
-  const icsString = cal.toString();
+  Sentry.logger.info("[8a] Function: Google Calendar event created", {
+    calendarId,
+    eventId: result.data.id,
+  });
+
+  const confidence = Math.round(args.confidence * 100);
+  const calendarLabel = args.calendar === "shared" ?
+    "G plus G (shared with Georgia)" : "Gui (personal)";
 
   return {
     type: "calendar_event",
-    text: `Event created. Confidence = ${Math.round(args.confidence * 100)}%`,
-    icalEvent: {
-      method: "REQUEST",
-      content: icsString,
-    },
+    text: `Event "${args.summary}" added to ${calendarLabel} calendar.` +
+      ` Confidence = ${confidence}%`,
+    link: result.data.htmlLink,
   };
 };
