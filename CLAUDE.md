@@ -40,14 +40,14 @@ Single exported function `guimail` in `index.js`. Pipeline:
 5. Executes the chosen tool handler, then sends back the raw RFC 2822 reply message
 
 **Tool handlers** (each in `functions/tools/`, assembled into `toolHandlers` in `index.js`):
-- `add_to_calendar` — creates events directly via the Google Calendar API using a lazy-initialized cached client (`service-account-key.json`); routes to either `GOOGLE_CAL_DEFAULT_ID` or `GOOGLE_CAL_SHARED_ID` based on the `calendar` arg ("default"/"shared"); timed events use `transparency: "opaque"` (busy), all-day events use `transparency: "transparent"` (free); all-day is detected by the absence of `T` in the `start` string; reply includes a clickable "View in Google Calendar" link via `toolResult.link`
+- `add_to_calendar` — creates events directly via the Google Calendar API using a lazy-initialized cached client (`service-account-key.json`); routes to either `GOOGLE_CAL_DEFAULT_ID` or `GOOGLE_CAL_SHARED_ID` based on the `calendar` arg ("default"/"shared"); timed events use `transparency: "opaque"` (busy), all-day events use `transparency: "transparent"` (free); all-day is detected by the absence of `T` in the `start` string; returns `toolResult.link` as `{url, label}` for a clickable "View in Google Calendar" link
 - `summarize_email` — returns the summary text
 - `add_to_budget` — writes to a Google Sheet via a lazily-initialized cached client (`service-account-key.json`); also creates a Splitwise expense automatically if the issuer is Capital One
 - `add_to_splitwise` — creates a Splitwise expense via `axiosInstance` (pre-configured with retry logic); bills matching Google Fi or PG&E use `createExpenseWithGeorgia` for an explicit 50/50 split instead of `split_equally`
 
 **Shared Splitwise utilities** (axios client, retry config, `checkSplitwiseError`, `splitHalf`, `createExpenseWithGeorgia`) live in `functions/utils/splitwise.js`.
 
-All tools with data extraction include a `confidence` field; handlers reject calls below 0.5.
+All tools with data extraction include a `confidence` field; handlers reject calls below 0.5. Tool handlers return `{ type, text, link?, confidence? }` where `text` is the main action sentence(s) only (paragraphs separated by `\n\n`), `link` is `{url, label}` when applicable, and `confidence` is an integer percentage. `index.js` assembles these into both `text` and `html` reply parts in a consistent order: main text → link → confidence → sign-off.
 
 **Reply threading**: the reply sets `In-Reply-To` and `References` headers using the original `messageID` and `references` query params.
 
