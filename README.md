@@ -7,7 +7,7 @@
 
 An intelligent multi-purpose email processing AI agent. Forward any email to Guimail and it will automatically:
 
-- 📅 **Extract calendar events** - Get iCal invitations for meetings, appointments, or any event (in-person or virtual) and add to the calendar with one tap/click
+- 📅 **Extract calendar events** - Automatically add meetings, appointments, or any event (in-person or virtual) directly to Google Calendar
 - 📝 **Summarize content** - Receive concise summaries of long emails, newsletters, and threads
 - 💸 **Track expenses** - Add credit card statement balances to a budget spreadsheet
 - ➗ **Share expenses** - Add expenses to Splitwise
@@ -15,7 +15,7 @@ An intelligent multi-purpose email processing AI agent. Forward any email to Gui
 ### ✨ Features
 
 - **Calendar event extraction** with smart timezone detection, handling of relative dates ("tomorrow", "next Friday")
-- **iCal invitation** generation with proper **email threading**
+- **Direct Google Calendar integration** with per-calendar routing and proper **email threading**
 - **Email summarization** for quick insights from lengthy content
 - **Budget tracking** with Google Sheets
 - **Expense splitting** with Splitwise
@@ -38,7 +38,7 @@ There are two main components:
 - Processes email content using Gemini API with tool calling
 - Automatically chooses tool for calendar event, summarization, budget tracking, or expense creation
 - Extracts structured data with validation and confidence scoring
-- Generates iCal invitations using industry-standard formatting
+- Creates Google Calendar events directly via API with per-calendar routing
 - Updates Google Sheets via API
 - Creates Splitwise expense via API
 - Composes and sends reply emails with proper threading
@@ -51,8 +51,7 @@ There are two main components:
 - `cloudflare:email` - email worker runtime
 - `eslint` and `stylistic` - code linting
 - `firebase-functions` - serverless backend
-- `googleapis` - Google Sheets API integration
-- `ical-generator` - iCal invitation creation
+- `googleapis` - integration with Google Sheets and Calendar APIs
 - `nodemailer` - email composition
 - `postal-mime` - email parsing and content extraction
 - `wrangler` and `firebase-tools` - deployment and management

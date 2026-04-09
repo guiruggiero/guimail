@@ -40,7 +40,7 @@ Single exported function `guimail` in `index.js`. Pipeline:
 5. Executes the chosen tool handler, then sends back the raw RFC 2822 reply message
 
 **Tool handlers** (each in `functions/tools/`, assembled into `toolHandlers` in `index.js`):
-- `create_calendar_event` — generates an iCal invite string using `ical-generator`; attached to reply as `icalEvent`; timed events use `TRANSP:OPAQUE` (busy), all-day events use `TRANSP:TRANSPARENT` (free) with `allDay: true`; all-day is detected by the absence of `T` in the `start` string
+- `add_to_calendar` — creates events directly via the Google Calendar API using a lazy-initialized cached client (`service-account-key.json`); routes to either `GOOGLE_CAL_DEFAULT_ID` or `GOOGLE_CAL_SHARED_ID` based on the `calendar` arg ("default"/"shared"); timed events use `transparency: "opaque"` (busy), all-day events use `transparency: "transparent"` (free); all-day is detected by the absence of `T` in the `start` string; reply includes a clickable "View in Google Calendar" link via `toolResult.link`
 - `summarize_email` — returns the summary text
 - `add_to_budget` — writes to a Google Sheet via a lazily-initialized cached client (`service-account-key.json`); also creates a Splitwise expense automatically if the issuer is Capital One
 - `add_to_splitwise` — creates a Splitwise expense via `axiosInstance` (pre-configured with retry logic); bills matching Google Fi or PG&E use `createExpenseWithGeorgia` for an explicit 50/50 split instead of `split_equally`
@@ -58,7 +58,7 @@ All tools with data extraction include a `confidence` field; handlers reject cal
 - Set as Cloudflare Worker secrets via `npm run key`.
 
 **Required env vars (Firebase):**
-- `GEMINI_API_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_PUBLIC_KEY`, `SENTRY_DSN`, `WORKER_SECRET`, `SPLITWISE_API_KEY`, `SPLITWISE_GUI_ID`, `SPLITWISE_GEORGIA_ID`, `GOOGLE_SHEET_ID`, `EMAIL_GUIMAIL`
+- `GEMINI_API_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_PUBLIC_KEY`, `SENTRY_DSN`, `WORKER_SECRET`, `SPLITWISE_API_KEY`, `SPLITWISE_GUI_ID`, `SPLITWISE_GEORGIA_ID`, `GOOGLE_SHEET_ID`, `GOOGLE_CAL_DEFAULT_ID`, `GOOGLE_CAL_SHARED_ID`, `EMAIL_GUIMAIL`
 - Set in the Firebase Console (no `.env` file); available at cold start via `process.env.*`.
 
 **Sentry:** Errors logged to the `guimail` project (`GUIMAIL-*` issue IDs).

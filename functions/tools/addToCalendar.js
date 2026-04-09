@@ -37,7 +37,7 @@ const getCalendarClient = async () => {
 };
 
 export const definition = {
-  name: "create_calendar_event",
+  name: "add_to_calendar",
   description: "Creates a calendar event with details extracted from the" +
     " email message including title and time, location, and description",
   parameters: {
@@ -129,7 +129,7 @@ export const handler = async (args) => {
 
   const confidence = Math.round(args.confidence * 100);
   const calendarLabel = args.calendar === "shared" ?
-    "G plus G (shared with Georgia)" : "Gui (personal)";
+    "G plus G" : "personal";
 
   return {
     type: "calendar_event",

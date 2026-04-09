@@ -6,9 +6,9 @@ import {onRequest} from "firebase-functions/v2/https";
 import PostalMime from "postal-mime";
 import MailComposer from "nodemailer/lib/mail-composer/index.js";
 import {
-  definition as calendarEventDef,
-  handler as calendarEventHandler,
-} from "./tools/calendarEvent.js";
+  definition as addToCalendarDef,
+  handler as addToCalendarHandler,
+} from "./tools/addToCalendar.js";
 import {
   definition as summarizeEmailDef,
   handler as summarizeEmailHandler,
@@ -48,7 +48,7 @@ const modelConfig = {
     },
     tools: [{
       functionDeclarations: [
-        calendarEventDef,
+        addToCalendarDef,
         summarizeEmailDef,
         addToBudgetDef,
         addToSplitwiseDef,
@@ -64,7 +64,7 @@ const modelConfig = {
 
 // Tool handlers
 const toolHandlers = {
-  [calendarEventDef.name]: calendarEventHandler,
+  [addToCalendarDef.name]: addToCalendarHandler,
   [summarizeEmailDef.name]: summarizeEmailHandler,
   [addToBudgetDef.name]: addToBudgetHandler,
   [addToSplitwiseDef.name]: addToSplitwiseHandler,
