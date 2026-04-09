@@ -127,14 +127,16 @@ export const handler = async (args) => {
     eventId: result.data.id,
   });
 
-  const confidence = Math.round(args.confidence * 100);
   const calendarLabel = args.calendar === "shared" ?
     "G plus G" : "personal";
 
   return {
     type: "calendar_event",
-    text: `Event "${args.summary}" added to ${calendarLabel} calendar.` +
-      ` Confidence = ${confidence}%`,
-    link: result.data.htmlLink,
+    text: `Event "${args.summary}" added to ${calendarLabel} calendar.`,
+    link: {
+      url: result.data.htmlLink,
+      label: "View in Google Calendar",
+    },
+    confidence: Math.round(args.confidence * 100),
   };
 };

@@ -46,6 +46,7 @@ export const handler = async (args) => {
   if (args.confidence < 0.5) {
     throw new Error(`Low confidence: ${args.confidence}`);
   }
+  const confidence = Math.round(args.confidence * 100);
 
   // Format amount for display
   const formattedAmount = new Intl.NumberFormat("en-US", {
@@ -67,12 +68,12 @@ export const handler = async (args) => {
 
     return {
       type: "splitwise_expense",
-      text: `"${args.title}" of ${formattedAmount} added to Splitwise. ` +
-        `Confidence = ${Math.round(args.confidence * 100)}%`,
+      text: `"${args.title}" of ${formattedAmount} added to Splitwise.`,
+      confidence,
     };
   }
 
-  // Add expense on Splitwise
+  // Add expense on Splitwise - TODO: Splitwise deep link
   const expenseResponse = await axiosInstance.post("/create_expense", {
     cost: args.amount.toFixed(2),
     description: args.title,
@@ -88,8 +89,8 @@ export const handler = async (args) => {
 
   return {
     type: "splitwise_expense",
-    text: `"${args.title}" of ${formattedAmount} added to ` +
-      `Splitwise. Details:\n\n${args.details}\n\nConfidence = ` +
-      `${Math.round(args.confidence * 100)}%`,
+    text: `"${args.title}" of ${formattedAmount} added to Splitwise.` +
+      `\n\nDetails: ${args.details}`,
+    confidence,
   };
 };

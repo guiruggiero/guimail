@@ -108,9 +108,8 @@ export const handler = async (args) => {
   }).format(args.balance);
 
   // Build response text
-  const confidence = Math.round(args.confidence * 100);
   let responseText = `${args.issuer} balance of ${formattedBalance} ` +
-    `added to budget spreadsheet\nConfidence = ${confidence}%`;
+    `added to budget spreadsheet.`;
 
   // Add to Splitwise
   if (args.issuer === "Capital One") {
@@ -121,11 +120,12 @@ export const handler = async (args) => {
       expense: expenseResponse.data,
     });
 
-    responseText += "\n\nExpense also added to Splitwise";
+    responseText += "\n\nExpense also added to Splitwise.";
   }
 
   return {
     type: "budget_update",
     text: responseText,
+    confidence: Math.round(args.confidence * 100),
   };
 };

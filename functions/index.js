@@ -212,6 +212,28 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
       subjectStr : `Re: ${subjectStr}`; // Add "Re:" prefix
     const newReferences = [references, messageID].filter(Boolean).join(" ");
 
+    // Build plain text and HTML sections in standard order:
+    // main text → optional link → optional confidence → sign-off
+    const textSections = [toolResult.text];
+    const htmlSections = toolResult.text.split("\n\n")
+      .map((s) => `<p>${s}</p>`);
+
+    if (toolResult.link) {
+      textSections.push(toolResult.link.url);
+      htmlSections.push(
+        `<p><a href="${toolResult.link.url}">${toolResult.link.label}</a></p>`,
+      );
+    }
+
+    if (toolResult.confidence !== undefined) {
+      const confidenceLine = `Confidence = ${toolResult.confidence}%`;
+      textSections.push(confidenceLine);
+      htmlSections.push(`<p>${confidenceLine}</p>`);
+    }
+
+    textSections.push("Thank you for using Guimail!");
+    htmlSections.push("<p>Thank you for using Guimail!</p>");
+
     // Base message configuration
     const replyConfig = {
       from: `"Guimail" <${process.env.EMAIL_GUIMAIL}>`,
@@ -219,16 +241,9 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
       subject,
       inReplyTo: messageID,
       references: newReferences,
-      text: `${toolResult.text}\n\nThank you for using Guimail!`,
+      text: textSections.join("\n\n"),
+      html: htmlSections.join(""),
     };
-
-    // Add clickable Calendar link for calendar events
-    if (toolResult.link) {
-      replyConfig.html =
-        `<p>${toolResult.text}</p>` +
-        `<p><a href="${toolResult.link}">View in Google Calendar</a></p>` +
-        `<p>Thank you for using Guimail!</p>`;
-    }
 
     // Construct message
     const reply = new MailComposer(replyConfig);
