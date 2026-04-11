@@ -14,12 +14,14 @@ An intelligent multi-purpose email processing AI agent. Forward any email to Gui
 
 ### ✨ Features
 
-- **Calendar event extraction** with smart timezone detection, handling of relative dates ("tomorrow", "next Friday")
-- **Direct Google Calendar integration** with per-calendar routing and proper **email threading**
+- **Event extraction** with smart timezone detection, handling of relative dates ("tomorrow", "next Friday"), and flight information
+- **Google Calendar integration** with per-calendar routing
+- **FlightAware AeroAPI integration** for IATA->ICAO code mapping and flight tracking links
 - **Email summarization** for quick insights from lengthy content
 - **Budget tracking** with Google Sheets
 - **Expense splitting** with Splitwise
-- **Multi-tool AI agent** using Gemini Pro model through the Gemini API with **extensible architecture** for easy addition of new features
+- **Helpful responses** with proper **email threading**
+- **Multi-tool AI agent** using Gemini Flash model through the Gemini API with extensible architecture for easy addition of new features
 - **Sender authentication** with allowlist and **email size validation**
 - **Automatic retry logic** with exponential backoff
 - **Error tracking** and logging

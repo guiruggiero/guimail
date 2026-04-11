@@ -4,6 +4,7 @@ import {Type} from "@google/genai";
 import {google} from "googleapis";
 import {fileURLToPath} from "node:url";
 import path from "node:path";
+import {getFlightAwareUrl} from "../utils/flightaware.js";
 
 // ESM path resolution (needed for service-account-key.json)
 const __filename = fileURLToPath(import.meta.url);
@@ -77,6 +78,11 @@ export const definition = {
         description: "Calendar to add the event to: 'default' for Gui's" +
           " personal calendar, 'shared' for the calendar shared with Georgia",
       },
+      flight_number: {
+        type: Type.STRING,
+        description: "IATA flight number for flight events" +
+          " (e.g. 'AA123'). Omit for non-flight events.",
+      },
       confidence: {
         type: Type.NUMBER,
         description: "Confidence score between 0 and 1 indicating" +
@@ -98,11 +104,27 @@ export const handler = async (args) => {
   // Get cached Google Calendar client
   const calendar = await getCalendarClient();
 
+  // Resolve FlightAware tracking URL for flight events
+  let flightAwareUrl = null;
+  if (args.flight_number) {
+    try {
+      flightAwareUrl = await getFlightAwareUrl(args.flight_number);
+    } catch (err) {
+      // If eror, consider non-fatal and log
+      Sentry.captureException(err);
+    }
+  }
+
   // Build event resource
   const isAllDay = !args.start.includes("T");
+  const descriptionParts = [
+    args.description ?? "",
+    flightAwareUrl ? `Track flight: ${flightAwareUrl}` : null,
+    "Created with Guimail",
+  ].filter(Boolean);
   const eventResource = {
     summary: args.summary,
-    description: (args.description ?? "") + "\n\nCreated with Guimail",
+    description: descriptionParts.join("\n\n"),
     location: args.location,
     // All-day events show as free; timed events show as busy
     transparency: isAllDay ? "transparent" : "opaque",

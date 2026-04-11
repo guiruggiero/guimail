@@ -3,14 +3,14 @@ import axios from "axios";
 import axiosRetry from "axios-retry";
 
 // Axios instance for Splitwise
-export const axiosInstance = axios.create({
+export const splitwiseClient = axios.create({
   baseURL: "https://secure.splitwise.com/api/v3.0",
   timeout: 10000, // 10s
   headers: {"Authorization": `Bearer ${process.env.SPLITWISE_API_KEY}`},
 });
 
 // Retry configuration
-axiosRetry(axiosInstance, {
+axiosRetry(splitwiseClient, {
   retries: 2, // Retry attempts
   retryDelay: axiosRetry.exponentialDelay, // 1s then 2s between retries
   // Only retry on network or 5xx errors
@@ -80,7 +80,7 @@ export const createSharedExpense = async (
     payload[`users__${i + 1}__owed_share`] = otherOwed;
   });
 
-  const res = await axiosInstance.post("/create_expense", payload);
+  const res = await splitwiseClient.post("/create_expense", payload);
   checkSplitwiseError(res.data);
   return res;
 };

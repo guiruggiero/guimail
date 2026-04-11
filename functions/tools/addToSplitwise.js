@@ -2,7 +2,7 @@
 import * as Sentry from "@sentry/node";
 import {Type} from "@google/genai";
 import {
-  axiosInstance,
+  splitwiseClient,
   buildExpenseUrl,
   checkSplitwiseError,
   createSharedExpense,
@@ -108,7 +108,7 @@ export const handler = async (args) => {
   }
 
   // Solo log — no co-payers
-  const expenseResponse = await axiosInstance.post("/create_expense", {
+  const expenseResponse = await splitwiseClient.post("/create_expense", {
     cost: args.amount.toFixed(2),
     description: args.title,
     details: args.details + "\n\nCreated with Guimail",
