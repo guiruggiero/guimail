@@ -6,8 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Functions** (`functions/` directory):
 ```bash
-npm run lint    # ESLint check
-npm run deploy  # Deploy to Firebase Cloud Functions (runs lint first)
+npm run lint          # ESLint check
+npm run deploy        # Deploy to Firebase Cloud Functions (runs lint first)
+npm run prompt-pull   # Download production prompt from Langfuse → prompt.md
+npm run prompt-push   # Upload prompt.md to Langfuse as new version, not production
 ```
 
 **Worker** (`worker/` directory):
@@ -67,7 +69,9 @@ All tools with data extraction include a `confidence` field; handlers reject cal
 
 **Reply threading**: the reply sets `In-Reply-To` and `References` headers using the original `messageID` and `references` query params.
 
-**Prompt management**: `functions/prompt.md` is the system prompt that is pushed to Langfuse manually and excluded from regular commits. Always perform changes to the system prompt, but never consider it in the commit message.
+**Prompt management**: `functions/prompt.md` is the system prompt managed via the scripts above and excluded from regular commits. Always perform changes to the system prompt, but never consider it in the commit message. Scripts require `LANGFUSE_SECRET_KEY` and `LANGFUSE_PUBLIC_KEY` in `functions/.env` (gitignored).
+
+**Local scripts** (`functions/scripts/`): utility scripts not deployed with the function; run locally via npm scripts.
 
 **HTTP status code contract**: the function returns `502` for retryable errors (Gemini, Langfuse, Sheets API) and `500` for deterministic/post-write errors; the worker retries on `> 500` only.
 

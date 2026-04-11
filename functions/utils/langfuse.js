@@ -8,8 +8,19 @@ const langfuse = new LangfuseClient({
   baseUrl: "https://us.cloud.langfuse.com",
 });
 
-// Fetch a prompt by name
+// Fetch the production version of a prompt by name
 export const getPrompt = async (name) => {
   const res = await langfuse.prompt.get(name);
   return {prompt: res.prompt, version: res.version};
+};
+
+// Create a new prompt version without setting it as production
+export const createPromptVersion = async (name, content) => {
+  const res = await langfuse.prompt.create({
+    name,
+    type: "text",
+    prompt: content,
+    labels: [], // omit "production"
+  });
+  return res.version;
 };

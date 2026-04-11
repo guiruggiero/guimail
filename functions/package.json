@@ -28,6 +28,8 @@
   },
   "scripts": {
     "lint": "eslint .",
-    "deploy": "npx firebase deploy --only functions:guimail"
+    "deploy": "npx firebase deploy --only functions:guimail",
+    "prompt-pull": "node --env-file=.env scripts/prompt.js pull",
+    "prompt-push": "node --env-file=.env scripts/prompt.js push"
   }
 }
