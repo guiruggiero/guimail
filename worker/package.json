@@ -21,7 +21,7 @@
 		"lint": "eslint .",
 		"update": "npm i -D wrangler@latest",
 		"whoami": "npx wrangler whoami",
-		"key": "npx wrangler secret put/delete <KEY>",
+		"secret": "npx wrangler secret put/delete <SECRET_NAME>",
 		"deploy": "npx wrangler deploy"
 	}
 }

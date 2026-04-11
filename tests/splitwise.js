@@ -1,13 +1,13 @@
 // Imports
 import axios from "axios";
 import axiosRetry from "axios-retry";
-import {SPLITWISE_API_KEY, SPLITWISE_GUI_ID, SPLITWISE_GEORGIA_ID} from "../../secrets/guimail.mjs";
-// console.log(SPLITWISE_API_KEY);
+// console.log(process.env.SPLITWISE_API_KEY);
 
 // Axios instance
 const axiosInstance = axios.create({
     baseURL: "https://secure.splitwise.com/api/v3.0",
-    headers: {"Authorization": `Bearer ${SPLITWISE_API_KEY}`},
+    timeout: 10000, // 10s
+    headers: {"Authorization": `Bearer ${process.env.SPLITWISE_API_KEY}`},
 });
 
 // Retry configuration
@@ -22,47 +22,71 @@ axiosRetry(axiosInstance, {
 });
 
 // Get current user information
-// async function getCurrentUser() {
-//     const response = await axiosInstance.get("/get_current_user");
+async function getCurrentUser() {
+    const response = await axiosInstance.get("/get_current_user");
 
-//     console.log("Current user:", response.data);
-// }
+    console.log("Current user:", response.data);
+}
 // getCurrentUser();
 
-// Create expense
-async function createExpense(description, amount) {
-    // With Georgia
-    // const expense = {
-    //     cost: amount.toFixed(2),
-    //     description: description,
-    //     details: "Created via Guimail",
-    //     currency_code: "USD",
-    //     group_id: 0, // Direct expense between users
-    //     users__0__user_id: SPLITWISE_GUI_ID,
-    //     users__0__paid_share: amount.toFixed(2),
-    //     users__0__owed_share: (amount/2).toFixed(2),
-    //     users__1__user_id: SPLITWISE_GEORGIA_ID,
-    //     users__1__paid_share: "0",
-    //     users__1__owed_share: (amount/2).toFixed(2),
-    // };
-    
+// Get friends
+async function getFriends() {
+    const response = await axiosInstance.get("/get_friends");
+
+    console.log("Friends:", response.data.friends);
+}
+// getFriends();
+
+// Create expense with myself
+async function createExpense(description, amount) { 
     // With myself
     const expense = {
         cost: amount.toFixed(2),
         description: description,
-        details: "Created via Guimail",
+        details: "Created with Guimail",
         currency_code: "USD",
         group_id: 0, // Direct expense between users
         split_equally: true,
     };
-
     // console.log(expense);
 
     const expenseResponse = await axiosInstance.post("/create_expense", expense);
 
     console.log("Expense created:", expenseResponse.data);
 }
-createExpense("Test", 10);
+// createExpense("Test", 10);
+
+// Share with Georgia
+async function shareWithGeorgia(description, amount) {
+    const totalCents = Math.round(amount * 100);
+    const perCents = Math.floor(totalCents / 2);
+    const remainderCents = totalCents - perCents * 2;
+    const cost = (totalCents / 100).toFixed(2);
+    const payerOwed = ((perCents + remainderCents) / 100).toFixed(2);
+    const otherOwed = (perCents / 100).toFixed(2);
+
+    const expense = {
+        cost,
+        description: description,
+        details: "Created with Guimail",
+        currency_code: "USD",
+        group_id: 0, // Direct expense between users
+        users__0__user_id: process.env.SPLITWISE_ID_GUI,
+        users__0__paid_share: cost,
+        users__0__owed_share: payerOwed,
+        users__1__user_id: process.env.SPLITWISE_ID_GEORGIA,
+        users__1__paid_share: "0.00",
+        users__1__owed_share: otherOwed,
+    };
+    // console.log(expense);
+
+    const expenseResponse = await axiosInstance.post("/create_expense", expense);
+
+    console.log("Expense created:", expenseResponse.data);
+}
+// shareWithGeorgia("Test", 10);
+
+// ---
 
 // expenseResponse.data examples
 
@@ -79,7 +103,7 @@ createExpense("Test", 10);
 //       email_reminder: false,
 //       email_reminder_in_advance: -1,
 //       next_repeat: null,
-//       details: 'Created via Guimail',
+//       details: 'Created with Guimail',
 //       comments_count: 0,
 //       payment: false,
 //       creation_method: null,
