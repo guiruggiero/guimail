@@ -1,23 +1,10 @@
-// Imports
-import axios from "axios";
-import axiosRetry from "axios-retry";
+// Import
+import {createRetryClient} from "./axiosClient.js";
 
-// Axios instance for Splitwise
-export const splitwiseClient = axios.create({
+export const splitwiseClient = createRetryClient({
   baseURL: "https://secure.splitwise.com/api/v3.0",
   timeout: 10000, // 10s
   headers: {"Authorization": `Bearer ${process.env.SPLITWISE_API_KEY}`},
-});
-
-// Retry configuration
-axiosRetry(splitwiseClient, {
-  retries: 2, // Retry attempts
-  retryDelay: axiosRetry.exponentialDelay, // 1s then 2s between retries
-  // Only retry on network or 5xx errors
-  retryCondition: (error) => {
-    return axiosRetry.isNetworkOrIdempotentRequestError(error) ||
-      (error.response && error.response.status >= 500);
-  },
 });
 
 // Splitwise error checker

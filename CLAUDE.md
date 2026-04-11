@@ -49,16 +49,21 @@ Single exported function `guimail` in `index.js`. Pipeline:
 - Set in the Firebase Console (no `.env` file); available at cold start via `process.env.*`.
 
 **Tool handlers** (each in `functions/tools/`, assembled into `toolHandlers` in `index.js`):
-- `add_to_calendar` — creates events directly via the Google Calendar API using a lazy-initialized cached client (`service-account-key.json`); routes to either `GOOGLE_CAL_DEFAULT_ID` or `GOOGLE_CAL_SHARED_ID` based on the `calendar` arg ("default"/"shared"); timed events use `transparency: "opaque"` (busy), all-day events use `transparency: "transparent"` (free); all-day is detected by the absence of `T` in the `start` string; for flight events, accepts an optional `flight_number` (IATA code) and calls the FlightAware AeroAPI (`GET /flights/{ident}`) to resolve the ICAO code and embed a `Track flight: https://www.flightaware.com/live/flight/<ICAO>` link in the event description (best-effort: failures are captured in Sentry but do not block event creation); returns `toolResult.link` as `{url, label}` for a clickable "View in Google Calendar" link
+- `add_to_calendar` — creates events via the Google Calendar API (`googleCalendar.js`); routes to either `GOOGLE_CAL_DEFAULT_ID` or `GOOGLE_CAL_SHARED_ID` based on the `calendar` arg ("default"/"shared"); timed events use `transparency: "opaque"` (busy), all-day events use `transparency: "transparent"` (free); all-day is detected by the absence of `T` in the `start` string; for flight events, accepts an optional `flight_number` (IATA code) and calls the FlightAware AeroAPI (`GET /flights/{ident}`) to resolve the ICAO code and embed a `Track flight: https://www.flightaware.com/live/flight/<ICAO>` link in the event description (best-effort: failures are captured in Sentry but do not block event creation); returns `toolResult.link` as `{url, label}` for a clickable "View in Google Calendar" link
 - `summarize_email` — returns the summary text
-- `add_to_budget` — writes to a Google Sheet via a lazily-initialized cached client (`service-account-key.json`); also creates a Splitwise expense automatically if the issuer is Capital One
+- `add_to_budget` — writes to a Google Sheet via `googleSheets.js`; also creates a Splitwise expense automatically if the issuer is Capital One
 - `add_to_splitwise` — creates a Splitwise expense via `splitwiseClient` (pre-configured with retry logic); accepts optional `split_with` (array of person names) and `paid_by` (name of payer, defaults to Gui via `SPLITWISE_ID_GUI`); resolves names to Splitwise user IDs via `getPersonRegistry()`; splits equally among all participants; returns `toolResult.link` as `{url, label}` for a clickable "View in Splitwise" link using the expense ID from the API response
 
 All tools with data extraction include a `confidence` field; handlers reject calls below 0.5. Tool handlers return `{ type, text, link?, confidence? }` where `text` is the main action sentence(s) only (paragraphs separated by `\n\n`), `link` is `{url, label}` when applicable, and `confidence` is an integer percentage. `index.js` assembles these into both `text` and `html` reply parts in a consistent order: main text → link → confidence → sign-off.
 
-**Utilities** (each in `functions/utils/`)
-- Splitwise utilities — `splitwiseClient`, retry config, `checkSplitwiseError`, `getPersonRegistry`, `splitEqual`, `createSharedExpense`, `createExpenseWithGeorgia`
-- FlightAware — `aeroApiClient`, `getFlightAwareUrl`
+**Utilities** (each in `functions/utils/`):
+- `axiosClient.js` — `createRetryClient(config)`: shared axios+retry factory (2 retries, exponential backoff, network/5xx); used by `splitwise.js` and `flightaware.js`
+- `googleAuth.js` — `KEY_FILE`, `GOOGLE_RETRY_CONFIG`, `getGoogleAuth(scopes)`: shared Google service account auth; used by `googleCalendar.js` and `googleSheets.js`
+- `splitwise.js` — axios client, `checkSplitwiseError`, `getPersonRegistry`, `splitEqual`, `createSharedExpense`, `createExpenseWithGeorgia`
+- `flightaware.js` — axios client, `getFlightAwareUrl`
+- `googleCalendar.js` — Promise-cached Google Calendar client (`getCalendarClient`)
+- `googleSheets.js` — Promise-cached Google Sheets client (`getSheetsClient`)
+- `langfuse.js` — eagerly initialized Langfuse client (always used per request), `getPrompt(name)`
 
 **Reply threading**: the reply sets `In-Reply-To` and `References` headers using the original `messageID` and `references` query params.
 

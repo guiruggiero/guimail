@@ -1,7 +1,7 @@
 // Imports
 import * as Sentry from "@sentry/node";
 import {GoogleGenAI, FunctionCallingConfigMode} from "@google/genai";
-import {LangfuseClient} from "@langfuse/client";
+import {getPrompt} from "./utils/langfuse.js";
 import {onRequest} from "firebase-functions/v2/https";
 import PostalMime from "postal-mime";
 import MailComposer from "nodemailer/lib/mail-composer/index.js";
@@ -33,11 +33,6 @@ Sentry.init({
   })],
 });
 const ai = new GoogleGenAI({apiKey: process.env.GEMINI_API_KEY});
-const langfuse = new LangfuseClient({
-  secretKey: process.env.LANGFUSE_SECRET_KEY,
-  publicKey: process.env.LANGFUSE_PUBLIC_KEY,
-  baseUrl: "https://us.cloud.langfuse.com",
-});
 
 // Model configuration
 const modelConfig = {
@@ -129,7 +124,7 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
   // Get model prompt
   let instructions;
   try {
-    const promptResponse = await langfuse.prompt.get("Guimail");
+    const promptResponse = await getPrompt("Guimail");
     instructions = promptResponse.prompt;
 
     Sentry.logger.info("[6] Function: prompt fetched", {

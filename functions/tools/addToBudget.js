@@ -1,14 +1,8 @@
 // Imports
 import * as Sentry from "@sentry/node";
 import {Type} from "@google/genai";
-import {google} from "googleapis";
-import {fileURLToPath} from "node:url";
-import path from "node:path";
+import {getSheetsClient} from "../utils/googleSheets.js";
 import {createExpenseWithGeorgia} from "../utils/splitwise.js";
-
-// ESM path resolution (needed for service-account-key.json)
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Mapping of issuers and row numbers
 const issuerToRow = {
@@ -16,27 +10,6 @@ const issuerToRow = {
   "Capital One": "3",
   "Amex": "4",
   "Discover": "5",
-};
-
-// Lazy-initialized Google Sheets client
-let sheetsClient;
-const getSheetsClient = async () => {
-  if (sheetsClient) return sheetsClient;
-  const auth = new google.auth.GoogleAuth({
-    keyFile: path.join(__dirname, "..", "service-account-key.json"),
-    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-  });
-  sheetsClient = google.sheets({
-    version: "v4",
-    auth,
-    retryConfig: {
-      retry: 2,
-      retryDelay: 1000,
-      statusCodesToRetry: [[500, 599]],
-      httpMethodsToRetry: ["POST"],
-    },
-  });
-  return sheetsClient;
 };
 
 export const definition = {

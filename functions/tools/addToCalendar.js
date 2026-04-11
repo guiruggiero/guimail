@@ -1,40 +1,13 @@
 // Imports
 import * as Sentry from "@sentry/node";
 import {Type} from "@google/genai";
-import {google} from "googleapis";
-import {fileURLToPath} from "node:url";
-import path from "node:path";
+import {getCalendarClient} from "../utils/googleCalendar.js";
 import {getFlightAwareUrl} from "../utils/flightaware.js";
-
-// ESM path resolution (needed for service-account-key.json)
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Calendar IDs (set in Firebase env vars)
 const CALENDARS = {
   default: process.env.GOOGLE_CAL_DEFAULT_ID,
   shared: process.env.GOOGLE_CAL_SHARED_ID,
-};
-
-// Lazy-initialized Google Calendar client
-let calendarClient;
-const getCalendarClient = async () => {
-  if (calendarClient) return calendarClient;
-  const auth = new google.auth.GoogleAuth({
-    keyFile: path.join(__dirname, "..", "service-account-key.json"),
-    scopes: ["https://www.googleapis.com/auth/calendar.events"],
-  });
-  calendarClient = google.calendar({
-    version: "v3",
-    auth,
-    retryConfig: {
-      retry: 2,
-      retryDelay: 1000,
-      statusCodesToRetry: [[500, 599]],
-      httpMethodsToRetry: ["POST"],
-    },
-  });
-  return calendarClient;
 };
 
 export const definition = {
@@ -101,19 +74,16 @@ export const handler = async (args) => {
     throw new Error(`Low confidence: ${args.confidence}`);
   }
 
-  // Get cached Google Calendar client
-  const calendar = await getCalendarClient();
-
-  // Resolve FlightAware tracking URL for flight events
-  let flightAwareUrl = null;
-  if (args.flight_number) {
-    try {
-      flightAwareUrl = await getFlightAwareUrl(args.flight_number);
-    } catch (err) {
-      // If eror, consider non-fatal and log
-      Sentry.captureException(err);
-    }
-  }
+  // Fetch calendar client and optional FlightAware URL in parallel
+  const [calendar, flightAwareUrl] = await Promise.all([
+    getCalendarClient(),
+    args.flight_number
+      ? getFlightAwareUrl(args.flight_number).catch((err) => {
+          Sentry.captureException(err);
+          return null;
+        })
+      : null,
+  ]);
 
   // Build event resource
   const isAllDay = !args.start.includes("T");
