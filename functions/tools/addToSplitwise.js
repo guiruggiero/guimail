@@ -3,8 +3,10 @@ import * as Sentry from "@sentry/node";
 import {Type} from "@google/genai";
 import {
   axiosInstance,
+  buildExpenseUrl,
   checkSplitwiseError,
-  createExpenseWithGeorgia,
+  createSharedExpense,
+  getPersonRegistry,
 } from "../utils/splitwise.js";
 
 export const definition = {
@@ -28,8 +30,19 @@ export const definition = {
       },
       details: {
         type: Type.STRING,
-        description: "Summary of all other expense information, including " +
-          "the people involved (e.g., 'Share with: Georgia, Panda, and Ma')",
+        description: "Any remaining context about the expense " +
+          "not captured by other fields",
+      },
+      split_with: {
+        type: Type.ARRAY,
+        items: {type: Type.STRING},
+        description: "Lowercase names of people to split with " +
+          "(e.g., [\"georgia\", \"panda\"]). Omit to log for yourself only.",
+      },
+      paid_by: {
+        type: Type.STRING,
+        description: "Lowercase name of who paid (e.g., \"georgia\"). " +
+          "Defaults to \"gui\" if omitted.",
       },
       confidence: {
         type: Type.NUMBER,
@@ -54,26 +67,47 @@ export const handler = async (args) => {
     currency: args.currency,
   }).format(args.amount);
 
-  // Google Fi/PG&E split with Georgia
-  const titleLower = args.title.toLowerCase();
-  const isGeorgiaSplit = titleLower.includes("google fi") ||
-    titleLower.includes("pg&e");
-  if (isGeorgiaSplit) {
-    const expenseResponse = await createExpenseWithGeorgia(
-      args.title, args.amount, args.currency);
+  const names = (args.split_with ?? []).map((n) => n.toLowerCase());
+
+  if (names.length > 0) {
+    const registry = getPersonRegistry();
+
+    // Resolve payer ID (defaults to Gui)
+    const payerName = args.paid_by?.toLowerCase();
+    const payerId = payerName ?
+      registry.get(payerName) : process.env.SPLITWISE_ID_GUI;
+    if (!payerId) throw new Error(`Unknown payer: ${payerName ?? "Gui"}`);
+
+    // Resolve split_with to IDs; always include Gui
+    const namedIds = names.map((n) => {
+      const id = registry.get(n);
+      if (!id) throw new Error(`Unknown person: ${n}`);
+      return id;
+    });
+    const allIds = [...new Set([process.env.SPLITWISE_ID_GUI, ...namedIds])];
+
+    // Others = all participants except the payer
+    const otherIds = allIds.filter((id) => id !== payerId);
+
+    const expenseResponse = await createSharedExpense(
+      args.title, args.amount, args.currency, otherIds, payerId);
 
     Sentry.logger.info("[8c] Function: Splitwise expense added", {
       expense: expenseResponse.data,
     });
 
+    const expenseUrl = buildExpenseUrl(expenseResponse.data);
+    const withNames = names.join(", ");
     return {
       type: "splitwise_expense",
-      text: `"${args.title}" of ${formattedAmount} added to Splitwise.`,
+      text: `"${args.title}" of ${formattedAmount} added to ` +
+        `Splitwise (split with ${withNames}).`,
+      ...(expenseUrl && {link: {url: expenseUrl, label: "View in Splitwise"}}),
       confidence,
     };
   }
 
-  // Add expense on Splitwise - TODO: Splitwise deep link
+  // Solo log — no co-payers
   const expenseResponse = await axiosInstance.post("/create_expense", {
     cost: args.amount.toFixed(2),
     description: args.title,
@@ -87,10 +121,13 @@ export const handler = async (args) => {
     expense: expenseResponse.data,
   });
 
+  const expenseUrl = buildExpenseUrl(expenseResponse.data);
+
   return {
     type: "splitwise_expense",
     text: `"${args.title}" of ${formattedAmount} added to Splitwise.` +
       `\n\nDetails: ${args.details}`,
+    ...(expenseUrl && {link: {url: expenseUrl, label: "View in Splitwise"}}),
     confidence,
   };
 };

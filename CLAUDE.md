@@ -43,9 +43,9 @@ Single exported function `guimail` in `index.js`. Pipeline:
 - `add_to_calendar` — creates events directly via the Google Calendar API using a lazy-initialized cached client (`service-account-key.json`); routes to either `GOOGLE_CAL_DEFAULT_ID` or `GOOGLE_CAL_SHARED_ID` based on the `calendar` arg ("default"/"shared"); timed events use `transparency: "opaque"` (busy), all-day events use `transparency: "transparent"` (free); all-day is detected by the absence of `T` in the `start` string; returns `toolResult.link` as `{url, label}` for a clickable "View in Google Calendar" link
 - `summarize_email` — returns the summary text
 - `add_to_budget` — writes to a Google Sheet via a lazily-initialized cached client (`service-account-key.json`); also creates a Splitwise expense automatically if the issuer is Capital One
-- `add_to_splitwise` — creates a Splitwise expense via `axiosInstance` (pre-configured with retry logic); bills matching Google Fi or PG&E use `createExpenseWithGeorgia` for an explicit 50/50 split instead of `split_equally`
+- `add_to_splitwise` — creates a Splitwise expense via `axiosInstance` (pre-configured with retry logic); accepts optional `split_with` (array of person names) and `paid_by` (name of payer, defaults to Gui via `SPLITWISE_ID_GUI`); resolves names to Splitwise user IDs via `getPersonRegistry()`; splits equally among all participants; returns `toolResult.link` as `{url, label}` for a clickable "View in Splitwise" link using the expense ID from the API response
 
-**Shared Splitwise utilities** (axios client, retry config, `checkSplitwiseError`, `splitHalf`, `createExpenseWithGeorgia`) live in `functions/utils/splitwise.js`.
+**Shared Splitwise utilities** (axios client, retry config, `checkSplitwiseError`, `getPersonRegistry`, `splitEqual`, `createSharedExpense`, `createExpenseWithGeorgia`) live in `functions/utils/splitwise.js`.
 
 All tools with data extraction include a `confidence` field; handlers reject calls below 0.5. Tool handlers return `{ type, text, link?, confidence? }` where `text` is the main action sentence(s) only (paragraphs separated by `\n\n`), `link` is `{url, label}` when applicable, and `confidence` is an integer percentage. `index.js` assembles these into both `text` and `html` reply parts in a consistent order: main text → link → confidence → sign-off.
 
@@ -58,7 +58,8 @@ All tools with data extraction include a `confidence` field; handlers reject cal
 - Set as Cloudflare Worker secrets via `npm run key`.
 
 **Required env vars (Firebase):**
-- `GEMINI_API_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_PUBLIC_KEY`, `SENTRY_DSN`, `WORKER_SECRET`, `SPLITWISE_API_KEY`, `SPLITWISE_GUI_ID`, `SPLITWISE_GEORGIA_ID`, `GOOGLE_SHEET_ID`, `GOOGLE_CAL_DEFAULT_ID`, `GOOGLE_CAL_SHARED_ID`, `EMAIL_GUIMAIL`
+- `GEMINI_API_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_PUBLIC_KEY`, `SENTRY_DSN`, `WORKER_SECRET`, `SPLITWISE_API_KEY`, `GOOGLE_SHEET_ID`, `GOOGLE_CAL_DEFAULT_ID`, `GOOGLE_CAL_SHARED_ID`, `EMAIL_GUIMAIL`
+- Splitwise person registry: `SPLITWISE_ID_<NAME>=<user_id>` (e.g. `SPLITWISE_ID_GUI`, `SPLITWISE_ID_GEORGIA`); add one per person to enable splitting with them by name
 - Set in the Firebase Console (no `.env` file); available at cold start via `process.env.*`.
 
 **Sentry:** Errors logged to the `guimail` project (`GUIMAIL-*` issue IDs).
