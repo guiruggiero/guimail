@@ -77,12 +77,12 @@ export const handler = async (args) => {
   // Fetch calendar client and optional FlightAware URL in parallel
   const [calendar, flightAwareUrl] = await Promise.all([
     getCalendarClient(),
-    args.flight_number
-      ? getFlightAwareUrl(args.flight_number).catch((err) => {
-          Sentry.captureException(err);
-          return null;
-        })
-      : null,
+    args.flight_number ?
+      getFlightAwareUrl(args.flight_number).catch((err) => {
+        Sentry.captureException(err);
+        return null;
+      }) :
+      null,
   ]);
 
   // Build event resource
