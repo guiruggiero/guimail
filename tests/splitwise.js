@@ -1,44 +1,45 @@
-// Imports
-import axios from "axios";
-import axiosRetry from "axios-retry";
 // console.log(process.env.SPLITWISE_API_KEY);
 
-// Axios instance
-const axiosInstance = axios.create({
-    baseURL: "https://secure.splitwise.com/api/v3.0",
-    timeout: 10000, // 10s
-    headers: {"Authorization": `Bearer ${process.env.SPLITWISE_API_KEY}`},
-});
+// Imports
+import {writeFile} from "fs/promises";
 
-// Retry configuration
-axiosRetry(axiosInstance, {
-    retries: 2, // Retry attempts
-    retryDelay: axiosRetry.exponentialDelay, // 1s then 2s between retries
-    // Only retry on network or 5xx errors
-    retryCondition: (error) => {
-        return axiosRetry.isNetworkOrIdempotentRequestError(error) ||
-            (error.response && error.response.status >= 500);
-    },
-});
+// Base URL
+const BASE_URL = "https://secure.splitwise.com/api/v3.0";
+
+// Fetch wrapper
+async function splitwiseFetch(path, options = {}) {
+    const response = await fetch(`${BASE_URL}${path}`, {
+        ...options,
+        headers: {
+            "Authorization": `Bearer ${process.env.SPLITWISE_API_KEY}`,
+            ...options.headers,
+        },
+    });
+    return response.json();
+}
 
 // Get current user information
 async function getCurrentUser() {
-    const response = await axiosInstance.get("/get_current_user");
+    const data = await splitwiseFetch("/get_current_user");
 
-    console.log("Current user:", response.data);
+    console.log("Current user:", data);
 }
 // getCurrentUser();
 
 // Get friends
 async function getFriends() {
-    const response = await axiosInstance.get("/get_friends");
+    const data = await splitwiseFetch("/get_friends");
 
-    console.log("Friends:", response.data.friends);
+    const friends = data.friends.map(({id, first_name, last_name, email}) =>
+        ({id, first_name, last_name, email})
+    );
+    await writeFile(new URL("splitwiseFriends.json", import.meta.url), JSON.stringify(friends, null, 2));
+    console.log("Written to splitwiseFriends.json");
 }
 // getFriends();
 
 // Create expense with myself
-async function createExpense(description, amount) { 
+async function createExpense(description, amount) {
     // With myself
     const expense = {
         cost: amount.toFixed(2),
@@ -50,9 +51,13 @@ async function createExpense(description, amount) {
     };
     // console.log(expense);
 
-    const expenseResponse = await axiosInstance.post("/create_expense", expense);
+    const data = await splitwiseFetch("/create_expense", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(expense),
+    });
 
-    console.log("Expense created:", expenseResponse.data);
+    console.log("Expense ID:", data.expenses?.[0]?.id ?? data);
 }
 // createExpense("Test", 10);
 
@@ -80,9 +85,13 @@ async function shareWithGeorgia(description, amount) {
     };
     // console.log(expense);
 
-    const expenseResponse = await axiosInstance.post("/create_expense", expense);
+    const data = await splitwiseFetch("/create_expense", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(expense),
+    });
 
-    console.log("Expense created:", expenseResponse.data);
+    console.log("Expense ID:", data.expenses?.[0]?.id ?? data);
 }
 // shareWithGeorgia("Test", 10);
 
