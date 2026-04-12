@@ -72,13 +72,7 @@ export const createSharedExpense = async (
   return res;
 };
 
-// Builds a Splitwise expense URL from an API response
-export const buildExpenseUrl = (expenseData) => {
-  const id = expenseData.expenses?.[0]?.id;
-  return id ? `https://secure.splitwise.com/#/expenses/${id}` : null;
-};
-
-// Creator for expenses with Georgia (backward compat for addToBudget)
+// Creator for expenses with Georgia
 export const createExpenseWithGeorgia = async (
   description, amount, currency) => {
   return createSharedExpense(

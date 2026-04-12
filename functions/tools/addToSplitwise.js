@@ -3,11 +3,12 @@ import * as Sentry from "@sentry/node";
 import {Type} from "@google/genai";
 import {
   splitwiseClient,
-  buildExpenseUrl,
   checkSplitwiseError,
   createSharedExpense,
   getPersonRegistry,
 } from "../utils/splitwise.js";
+
+const SPLITWISE_LINK = {url: "https://secure.splitwise.com/#/activity", label: "View in Splitwise"};
 
 export const definition = {
   name: "add_to_splitwise",
@@ -96,13 +97,12 @@ export const handler = async (args) => {
       expense: expenseResponse.data,
     });
 
-    const expenseUrl = buildExpenseUrl(expenseResponse.data);
     const withNames = names.join(", ");
     return {
       type: "splitwise_expense",
       text: `"${args.title}" of ${formattedAmount} added to ` +
         `Splitwise (split with ${withNames}).`,
-      ...(expenseUrl && {link: {url: expenseUrl, label: "View in Splitwise"}}),
+      link: SPLITWISE_LINK,
       confidence,
     };
   }
@@ -121,13 +121,11 @@ export const handler = async (args) => {
     expense: expenseResponse.data,
   });
 
-  const expenseUrl = buildExpenseUrl(expenseResponse.data);
-
   return {
     type: "splitwise_expense",
     text: `"${args.title}" of ${formattedAmount} added to Splitwise.` +
       `\n\nDetails: ${args.details}`,
-    ...(expenseUrl && {link: {url: expenseUrl, label: "View in Splitwise"}}),
+    link: SPLITWISE_LINK,
     confidence,
   };
 };
