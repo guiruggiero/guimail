@@ -19,6 +19,7 @@
 	},
 	"scripts": {
 		"lint": "eslint .",
+    	"lint-fix": "eslint . --fix",
 		"update": "npm i -D wrangler@latest",
 		"whoami": "npx wrangler whoami",
 		"secret": "npx wrangler secret put/delete <SECRET_NAME>",
