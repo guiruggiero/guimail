@@ -39,8 +39,6 @@ export default Sentry.withSentry(
                     env.EMAIL_GUI,
                     env.EMAIL_GUI_AUTO_FWD,
                     env.EMAIL_UM,
-                    env.EMAIL_GEORGIA,
-                    // env.EMAIL_PANDA,
                 ].filter(Boolean).map(sender => sender.toLowerCase())); // Forced lowercase
             }
 
