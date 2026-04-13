@@ -6,17 +6,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Functions** (`functions/` directory):
 ```bash
-npm run lint          # ESLint check
-npm run deploy        # Deploy to Firebase Cloud Functions (runs lint first)
-npm run prompt-pull   # Download production prompt from Langfuse → prompt.md
-npm run prompt-push   # Upload prompt.md to Langfuse as new version, not production
+npm run lint         # ESLint check
+npm run lint-fix     # ESLint with auto-fix
+npm run deploy       # Deploy to Firebase Cloud Functions (runs lint first)
+npm run prompt-pull  # Download production prompt from Langfuse → prompt.md
+npm run prompt-push  # Upload prompt.md to Langfuse as new version, not production
+npm run friends      # Minify functions/scripts/friends.json → SPLITWISE_FRIENDS in .env
 ```
 
 **Worker** (`worker/` directory):
 ```bash
-npm run lint    # ESLint check
-npm run deploy  # Deploy to Cloudflare Worker via wrangler
-npm run key     # Manage Cloudflare Worker secrets
+npm run lint      # ESLint check
+npm run lint-fix  # ESLint with auto-fix
+npm run deploy    # Deploy to Cloudflare Worker via wrangler
+npm run update    # Update wrangler to latest
+npm run whoami    # Check authenticated Cloudflare account
+npm run secret    # Manage Cloudflare Worker secrets (put/delete)
 ```
 
 Never modify files in `tests/` — these are manual scripts for local use only.
@@ -35,7 +40,7 @@ Receives emails via Cloudflare Email Routing. Pipeline:
 
 **Required env vars:**
 - `SENTRY_DSN`, `WORKER_SECRET`, `EMAIL_GUIMAIL`, `EMAIL_GUI`, `EMAIL_GUI_AUTO_FWD`, `EMAIL_UM`, `EMAIL_GEORGIA`
-- Set as Cloudflare Worker secrets via `npm run key`.
+- Set as Cloudflare Worker secrets via `npm run secret`.
 
 ### Firebase Cloud Function (`functions/`)
 Single exported function `guimail` in `index.js`. Pipeline:
@@ -47,21 +52,21 @@ Single exported function `guimail` in `index.js`. Pipeline:
 
 **Required env vars (Firebase):**
 - `GEMINI_API_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_PUBLIC_KEY`, `SENTRY_DSN`, `WORKER_SECRET`, `SPLITWISE_API_KEY`, `GOOGLE_SHEET_ID`, `GOOGLE_CAL_DEFAULT_ID`, `GOOGLE_CAL_SHARED_ID`, `EMAIL_GUIMAIL`, `FLIGHTAWARE_AEROAPI_KEY`
-- Splitwise person registry: `SPLITWISE_ID_<NAME>=<user_id>` (e.g. `SPLITWISE_ID_GUI`, `SPLITWISE_ID_GEORGIA`); add one per person to enable splitting with them by name
-- Set in the Firebase Console (no `.env` file); available at cold start via `process.env.*`.
+- `SPLITWISE_FRIENDS` — minified JSON array of `{id, name, nickname}`; source of truth is `functions/scripts/friends.json` (gitignored); run `npm run friends` to update `.env` after editing the JSON; names are indexed by first name, full name, and each nickname token (split on " or "); `SPLITWISE_ID_GUI` and `SPLITWISE_ID_GEORGIA` remain as separate env vars for default-payer and `createExpenseWithGeorgia` logic
+- All env vars are kept in `functions/.env` (gitignored) and picked up automatically by Firebase CLI on deploy; do not set them manually in the Console
 
 **Tool handlers** (each in `functions/tools/`, assembled into `toolHandlers` in `index.js`):
 - `add_to_calendar` — creates events via the Google Calendar API (`googleCalendar.js`); routes to either `GOOGLE_CAL_DEFAULT_ID` or `GOOGLE_CAL_SHARED_ID` based on the `calendar` arg ("default"/"shared"); timed events use `transparency: "opaque"` (busy), all-day events use `transparency: "transparent"` (free); all-day is detected by the absence of `T` in the `start` string; for flight events, accepts an optional `flight_number` (IATA code) and calls the FlightAware AeroAPI (`GET /flights/{ident}`) to resolve the ICAO code and embed a `Track flight: https://www.flightaware.com/live/flight/<ICAO>` link in the event description (best-effort: failures are captured in Sentry but do not block event creation); returns `toolResult.link` as `{url, label}` for a clickable "View in Google Calendar" link
 - `summarize_email` — returns the summary text
 - `add_to_budget` — writes to a Google Sheet via `googleSheets.js`; also creates a Splitwise expense automatically if the issuer is Capital One
-- `add_to_splitwise` — creates a Splitwise expense via `splitwiseClient` (pre-configured with retry logic); accepts optional `split_with` (array of person names) and `paid_by` (name of payer, defaults to Gui via `SPLITWISE_ID_GUI`); resolves names to Splitwise user IDs via `getPersonRegistry()`; splits equally among all participants; returns `toolResult.link` as `{url, label}` for a clickable "View in Splitwise" link using the expense ID from the API response
+- `add_to_splitwise` — creates a Splitwise expense via `createSoloExpense` or `createSharedExpense`; accepts optional `split_with` (array of friend names) and `paid_by` (name of payer, defaults to Gui via `SPLITWISE_ID_GUI`); resolves names to Splitwise user IDs via `getFriendRegistry()`; if any name can't be resolved, falls back to a solo expense with a note in the details prompting manual editing in the app; splits equally among all participants; returns `toolResult.link` as `{url, label}` for a clickable "View in Splitwise" link using the expense ID from the API response
 
 All tools with data extraction include a `confidence` field; handlers reject calls below 0.5. Tool handlers return `{ type, text, link?, confidence? }` where `text` is the main action sentence(s) only (paragraphs separated by `\n\n`), `link` is `{url, label}` when applicable, and `confidence` is an integer percentage. `index.js` assembles these into both `text` and `html` reply parts in a consistent order: main text → link → confidence → sign-off.
 
 **Utilities** (each in `functions/utils/`):
 - `axiosClient.js` — `createRetryClient(config)`: shared axios+retry factory (2 retries, exponential backoff, network/5xx); used by `splitwise.js` and `flightaware.js`
 - `googleAuth.js` — `KEY_FILE`, `GOOGLE_RETRY_CONFIG`, `getGoogleAuth(scopes)`: shared Google service account auth; used by `googleCalendar.js` and `googleSheets.js`
-- `splitwise.js` — axios client, `checkSplitwiseError`, `getPersonRegistry`, `splitEqual`, `createSharedExpense`, `createExpenseWithGeorgia`
+- `splitwise.js` — `getFriendRegistry` (reads `SPLITWISE_FRIENDS` env var; indexes by first name, full name, and nickname tokens), `createSoloExpense`, `createSharedExpense` (accepts optional `details` param), `createExpenseWithGeorgia`; `checkSplitwiseError` and `splitEqual` are internal helpers (not exported)
 - `flightaware.js` — axios client, `getFlightAwareUrl`
 - `googleCalendar.js` — Promise-cached Google Calendar client (`getCalendarClient`)
 - `googleSheets.js` — Promise-cached Google Sheets client (`getSheetsClient`)
@@ -71,7 +76,7 @@ All tools with data extraction include a `confidence` field; handlers reject cal
 
 **Prompt management**: `functions/prompt.md` is the system prompt managed via the scripts above and excluded from regular commits. Always perform changes to the system prompt, but never consider it in the commit message. Scripts require `LANGFUSE_SECRET_KEY` and `LANGFUSE_PUBLIC_KEY` in `functions/.env` (gitignored).
 
-**Local scripts** (`functions/scripts/`): utility scripts not deployed with the function; run locally via npm scripts.
+**Local scripts** (`functions/scripts/`): utility scripts not deployed with the function; run locally via npm scripts. Includes `prompt.js` (Langfuse prompt pull/push), `friends.json` (the friends registry source of truth), and `friends.js` (syncs it to `.env`).
 
 **HTTP status code contract**: the function returns `502` for retryable errors (Gemini, Langfuse, Sheets API) and `500` for deterministic/post-write errors; the worker retries on `> 500` only.
 

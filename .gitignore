@@ -3,3 +3,4 @@ node_modules/
 service-account-key.json
 prompt.md
 .env
+friends.json

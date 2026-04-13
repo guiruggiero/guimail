@@ -1,7 +1,7 @@
 // console.log(process.env.SPLITWISE_API_KEY);
 
 // Imports
-import {writeFile} from "fs/promises";
+import {writeFileSync} from "node:fs";
 
 // Base URL
 const BASE_URL = "https://secure.splitwise.com/api/v3.0";
@@ -33,8 +33,8 @@ async function getFriends() {
     const friends = data.friends.map(({id, first_name, last_name, email}) =>
         ({id, first_name, last_name, email})
     );
-    await writeFile(new URL("splitwiseFriends.json", import.meta.url), JSON.stringify(friends, null, 2));
-    console.log("Written to splitwiseFriends.json");
+    writeFileSync(new URL("friends.json", import.meta.url), JSON.stringify(friends, null, 2));
+    console.log("Written to friends.json");
 }
 // getFriends();
 

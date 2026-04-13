@@ -2,10 +2,9 @@
 import * as Sentry from "@sentry/node";
 import {Type} from "@google/genai";
 import {
-  splitwiseClient,
-  checkSplitwiseError,
+  getFriendRegistry,
+  createSoloExpense,
   createSharedExpense,
-  getPersonRegistry,
 } from "../utils/splitwise.js";
 
 const SPLITWISE_LINK = {url: "https://secure.splitwise.com/#/activity", label: "View in Splitwise"};
@@ -37,7 +36,7 @@ export const definition = {
       split_with: {
         type: Type.ARRAY,
         items: {type: Type.STRING},
-        description: "Lowercase names of people to split with " +
+        description: "Lowercase names of friends to split with " +
           "(e.g., [\"georgia\", \"panda\"]). Omit to log for yourself only.",
       },
       paid_by: {
@@ -71,29 +70,56 @@ export const handler = async (args) => {
   const names = (args.split_with ?? []).map((n) => n.toLowerCase());
 
   if (names.length > 0) {
-    const registry = getPersonRegistry();
+    const friends = getFriendRegistry();
 
     // Resolve payer ID (defaults to Gui)
     const payerName = args.paid_by?.toLowerCase();
     const payerId = payerName ?
-      registry.get(payerName) : process.env.SPLITWISE_ID_GUI;
+      friends.get(payerName) : process.env.SPLITWISE_ID_GUI;
     if (!payerId) throw new Error(`Unknown payer: ${payerName ?? "Gui"}`);
 
-    // Resolve split_with to IDs; always include Gui
-    const namedIds = names.map((n) => {
-      const id = registry.get(n);
-      if (!id) throw new Error(`Unknown person: ${n}`);
-      return id;
-    });
+    // Resolve names to IDs; collect unknowns instead of throwing
+    const unknownNames = [];
+    const namedIds = names.reduce((acc, n) => {
+      const id = friends.get(n);
+      if (id) acc.push(id);
+      else unknownNames.push(n);
+      return acc;
+    }, []);
+
+    // Fall back to solo expense if any names couldn't be resolved
+    if (unknownNames.length > 0) {
+      const unknownList = unknownNames.join(", ");
+      const fallbackDetails = [
+        args.details, `Could not resolve: ${unknownList}`,
+      ].filter(Boolean).join("\n\n");
+      const expenseResponse = await createSoloExpense(
+        args.title, args.amount, args.currency, fallbackDetails);
+      Sentry.logger.info("[8a] Function: Splitwise expense added", {
+        expense: expenseResponse.data,
+        unknownNames,
+      });
+
+      return {
+        type: "splitwise_expense",
+        text: `"${args.title}" of ${formattedAmount} added to ` +
+          `Splitwise (solo — could not find: ${unknownList}).` +
+          "\n\nOpen Splitwise to add the missing people to this expense.",
+        link: SPLITWISE_LINK,
+        confidence,
+      };
+    }
+
     const allIds = [...new Set([process.env.SPLITWISE_ID_GUI, ...namedIds])];
 
     // Others = all participants except the payer
     const otherIds = allIds.filter((id) => id !== payerId);
 
     const expenseResponse = await createSharedExpense(
-      args.title, args.amount, args.currency, otherIds, payerId);
+      args.title, args.amount, args.currency, otherIds, payerId,
+      args.details);
 
-    Sentry.logger.info("[8c] Function: Splitwise expense added", {
+    Sentry.logger.info("[8b] Function: Splitwise expense added", {
       expense: expenseResponse.data,
     });
 
@@ -108,16 +134,9 @@ export const handler = async (args) => {
   }
 
   // Solo log — no co-payers
-  const expenseResponse = await splitwiseClient.post("/create_expense", {
-    cost: args.amount.toFixed(2),
-    description: args.title,
-    details: args.details + "\n\nCreated with Guimail",
-    currency_code: args.currency,
-    group_id: 0, // Direct expense between users
-    split_equally: true,
-  });
-  checkSplitwiseError(expenseResponse.data);
-  Sentry.logger.info("[8d] Function: Splitwise expense added", {
+  const expenseResponse = await createSoloExpense(
+    args.title, args.amount, args.currency, args.details);
+  Sentry.logger.info("[8c] Function: Splitwise expense added", {
     expense: expenseResponse.data,
   });
 

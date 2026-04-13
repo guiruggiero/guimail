@@ -1,14 +1,14 @@
 // Import
 import {createRetryClient} from "./axiosClient.js";
 
-export const splitwiseClient = createRetryClient({
+const splitwiseClient = createRetryClient({
   baseURL: "https://secure.splitwise.com/api/v3.0",
   timeout: 10000, // 10s
   headers: {"Authorization": `Bearer ${process.env.SPLITWISE_API_KEY}`},
 });
 
 // Splitwise error checker
-export const checkSplitwiseError = (expenseData) => {
+const checkSplitwiseError = (expenseData) => {
   const {error, errors} = expenseData;
 
   if (error) throw new Error(`Splitwise API: ${error}`); // {error: ""}
@@ -19,20 +19,59 @@ export const checkSplitwiseError = (expenseData) => {
   }
 };
 
-// Person registry from SPLITWISE_ID_<NAME> env vars
-let personRegistry = null;
-export const getPersonRegistry = () => {
-  if (personRegistry) return personRegistry;
-  personRegistry = new Map();
-  for (const [key, value] of Object.entries(process.env)) {
-    const match = key.match(/^SPLITWISE_ID_(.+)$/);
-    if (match && value) personRegistry.set(match[1].toLowerCase(), value);
+// Creator for solo expenses (single-user)
+export const createSoloExpense = async (
+  description, amount, currency, details = "") => {
+  const fullDetails = [details, "Created with Guimail"]
+    .filter(Boolean).join("\n\n");
+
+  const res = await splitwiseClient.post("/create_expense", {
+    cost: amount.toFixed(2),
+    description,
+    details: fullDetails,
+    currency_code: currency,
+    group_id: 0,
+    split_equally: true,
+  });
+  checkSplitwiseError(res.data);
+  return res;
+};
+
+// Friend registry from SPLITWISE_FRIENDS env var, array of {id, name, nickname}
+let friendRegistry = null;
+export const getFriendRegistry = () => {
+  if (friendRegistry) return friendRegistry;
+
+  friendRegistry = new Map();
+  const raw = process.env.SPLITWISE_FRIENDS;
+  if (!raw) return friendRegistry;
+
+  let friends;
+  try {
+    friends = JSON.parse(raw);
+  } catch (err) {
+    throw new Error(
+      `Failed to parse SPLITWISE_FRIENDS: ${err.message}`, {cause: err});
   }
-  return personRegistry;
+  for (const {id, name, nickname} of friends) {
+    const sid = String(id);
+
+    const [firstName] = name.split(" ");
+    friendRegistry.set(firstName.toLowerCase(), sid);
+    friendRegistry.set(name.toLowerCase(), sid);
+
+    if (nickname) {
+      for (const part of nickname.split(/\s+or\s+/i)) {
+        friendRegistry.set(part.trim().toLowerCase(), sid);
+      }
+    }
+  }
+
+  return friendRegistry;
 };
 
 // Equal-split calculator for N+1 people (payer + others)
-export const splitEqual = (amount, numOthers) => {
+const splitEqual = (amount, numOthers) => {
   const totalParts = numOthers + 1;
   const totalCents = Math.round(amount * 100);
   const perCents = Math.floor(totalCents / totalParts);
@@ -46,14 +85,17 @@ export const splitEqual = (amount, numOthers) => {
 
 // Creator for shared expenses (payer + N others, split equally)
 export const createSharedExpense = async (
-  description, amount, currency, otherPersonIds, payerId) => {
+  description, amount, currency, otherPersonIds, payerId, details = "") => {
   const {cost, payerOwed, otherOwed} = splitEqual(
     amount, otherPersonIds.length);
+
+  const fullDetails = [details, "Created with Guimail"]
+    .filter(Boolean).join("\n\n");
 
   const payload = {
     cost,
     description,
-    details: "Created with Guimail",
+    details: fullDetails,
     currency_code: currency,
     group_id: 0,
     users__0__user_id: payerId,
