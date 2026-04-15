@@ -11,6 +11,7 @@ An intelligent multi-purpose email processing AI agent. Forward any email to Gui
 - 📝 **Summarize content** - Receive concise summaries of long emails, newsletters, and threads
 - 💸 **Track expenses** - Add credit card statement balances to a budget spreadsheet
 - ➗ **Share expenses** - Add expenses to Splitwise
+- 🤖 **Run coding tasks** - Forward emails with development requests to Claude Code running on your dev server
 
 ### ✨ Features
 
@@ -20,6 +21,7 @@ An intelligent multi-purpose email processing AI agent. Forward any email to Gui
 - **Email summarization** for quick insights from lengthy content
 - **Budget tracking** with Google Sheets
 - **Expense splitting** with Splitwise
+- **Claude Code integration** for running development tasks against your own dev server via a self-hosted gateway
 - **Helpful responses** with proper **email threading**
 - **Multi-tool AI agent** using Gemini Flash model through the Gemini API with extensible architecture for easy addition of new features
 - **Sender authentication** with allowlist and **email size validation**
@@ -38,11 +40,12 @@ There are two main components:
 
 #### Firebase Cloud Function (`functions/`)
 - Processes email content using Gemini API with tool calling
-- Automatically chooses tool for calendar event, summarization, budget tracking, or expense creation
+- Automatically chooses tool for calendar event, summarization, budget tracking, expense creation, or Claude Code task execution
 - Extracts structured data with validation and confidence scoring
 - Creates Google Calendar events directly via API with per-calendar routing
 - Updates Google Sheets via API
 - Creates Splitwise expense via API
+- Executes Claude Code tasks via a self-hosted gateway server
 - Composes and sends reply emails with proper threading
 
 ### 📦 Dependencies

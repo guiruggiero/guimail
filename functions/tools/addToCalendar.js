@@ -2,7 +2,7 @@
 import * as Sentry from "@sentry/node";
 import {Type} from "@google/genai";
 import {getCalendarClient} from "../utils/googleCalendar.js";
-import {getFlightAwareUrl} from "../utils/flightaware.js";
+import {getFlightAwareUrl} from "../utils/flightAware.js";
 
 // Calendar IDs (set in Firebase env vars)
 const CALENDARS = {

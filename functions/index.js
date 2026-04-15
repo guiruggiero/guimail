@@ -21,6 +21,10 @@ import {
   definition as addToSplitwiseDef,
   handler as addToSplitwiseHandler,
 } from "./tools/addToSplitwise.js";
+import {
+  definition as askClaudeCodeDef,
+  handler as askClaudeCodeHandler,
+} from "./tools/askClaudeCode.js";
 
 // Initializations
 Sentry.init({
@@ -47,6 +51,7 @@ const modelConfig = {
         summarizeEmailDef,
         addToBudgetDef,
         addToSplitwiseDef,
+        askClaudeCodeDef,
       ],
     }],
     toolConfig: {
@@ -63,13 +68,14 @@ const toolHandlers = {
   [summarizeEmailDef.name]: summarizeEmailHandler,
   [addToBudgetDef.name]: addToBudgetHandler,
   [addToSplitwiseDef.name]: addToSplitwiseHandler,
+  [askClaudeCodeDef.name]: askClaudeCodeHandler,
 };
 
 // Firebase function configuration
 const functionConfig = {
   cors: true,
   maxInstances: 2,
-  timeoutSeconds: 60,
+  timeoutSeconds: 420, // 7 minutes
   memory: "512MiB",
 };
 
