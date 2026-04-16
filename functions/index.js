@@ -116,7 +116,7 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
     if (!messageBody) throw new Error("Message has no text or HTML body");
 
     Sentry.logger.info("[5] Function: message body", {
-      messageBody: messageBody.substring(0, 1000),
+      messageBody: messageBody.slice(0, 1000),
     });
   } catch (error) {
     Sentry.captureException(error, {contexts: {body}});
@@ -135,7 +135,7 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
 
     Sentry.logger.info("[6] Function: prompt fetched", {
       version: promptResponse.version,
-      prompt: instructions.substring(0, 200),
+      prompt: instructions.slice(0, 200),
     });
   } catch (error) {
     Sentry.captureException(error);
@@ -174,7 +174,7 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
   } catch (error) {
     Sentry.captureException(error, {contexts: {
       geminiResult: result,
-      messageBody: messageBody.substring(0, 1000),
+      messageBody: messageBody.slice(0, 1000),
     }});
 
     response.status(502).send("Gemini call error");

@@ -3,10 +3,10 @@ import {createRetryClient} from "./axiosClient.js";
 
 // Axios instance for Claude Code Gateway
 const gatewayClient = createRetryClient({
-  baseURL: process.env.CLAUDE_CODE_GATEWAY_URL, // TODO: add to .env
+  baseURL: process.env.CLAUDE_CODE_GATEWAY_URL,
   timeout: 185000, // ~3 minutes, slightly over gateway timeout
   headers: {
-    "Authorization": `Bearer ${process.env.CLAUDE_CODE_GATEWAY_SECRET}`, // TODO: add to .env
+    "Authorization": `Bearer ${process.env.CLAUDE_CODE_GATEWAY_SECRET}`,
     "Content-Type": "application/json",
   },
 }, 1);

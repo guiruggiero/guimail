@@ -139,7 +139,7 @@ const modelConfig = {
   //   messageBody = body.text || body.html;
   //   if (!messageBody) throw new Error("Message has no text or HTML body");
   //   Sentry.logger.info("Function: message body", {
-  //     messageBody: messageBody.substring(0, 1000),
+  //     messageBody: messageBody.slice(0, 1000),
   //   });
   // } catch (error) {
   //   Sentry.captureException(error, {contexts: {body}});
@@ -204,7 +204,7 @@ const modelConfig = {
     icsString = cal.toString();
     // console.log(icsString);
     // Sentry.logger.info("Function: iCal created", {
-    //   icsString: icsString.substring(0, 500),
+    //   icsString: icsString.slice(0, 500),
     // });
   // } catch (error) {
   //   Sentry.captureException(error, {contexts: {icsString: icsString}});

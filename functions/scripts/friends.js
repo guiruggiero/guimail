@@ -10,7 +10,7 @@ const envPath = join(__dirname, "..", ".env");
 
 // Read and minify friends JSON
 const friends = JSON.parse(readFileSync(friendsPath, "utf8"));
-const line = `SPLITWISE_FRIENDS='${JSON.stringify(friends)}'`;
+const line = `SPLITWISE_FRIENDS="${JSON.stringify(friends)}"`;
 
 // Update existing entry or append if missing
 const env = readFileSync(envPath, "utf8");
