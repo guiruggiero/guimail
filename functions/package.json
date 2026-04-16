@@ -23,6 +23,8 @@
     "@eslint/js": "^10.0.1",
     "eslint": "^10.0.2",
     "eslint-config-google": "^0.14.0",
+    "express": "^5.2.1",
+    "helmet": "^8.1.0",
     "firebase-tools": "^15.14.0",
     "globals": "^17.5.0"
   },

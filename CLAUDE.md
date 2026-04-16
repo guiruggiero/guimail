@@ -24,7 +24,8 @@ npm run whoami    # Check authenticated Cloudflare account
 npm run secret    # Manage Cloudflare Worker secrets (put/delete)
 ```
 
-**Claude Code Gateway** (`claudeCodeGateway/` directory): TODO — document commands after first deployment.
+<!-- TODO: document commands, link with Local scripts below? -->
+**Claude Code Gateway** (`claudeCodeGateway/` directory): 
 
 Never modify files in `tests/` — these are manual scripts for local use only.
 
@@ -82,6 +83,7 @@ All tools with data extraction include a `confidence` field; handlers reject cal
 
 **Prompt management**: `functions/prompt.md` is the system prompt managed via the scripts above and excluded from regular commits. Always perform changes to the system prompt, but never consider it in the commit message. Scripts require `LANGFUSE_SECRET_KEY` and `LANGFUSE_PUBLIC_KEY` in `functions/.env` (gitignored).
 
+<!-- TODO: add claudeCodeGateway.js via PM2 -->
 **Local scripts** (`functions/scripts/`): utility scripts not deployed with the function; run locally via npm scripts. Includes `prompt.js` (Langfuse prompt pull/push), `friends.json` (the friends registry source of truth), and `friends.js` (syncs it to `.env`).
 
 **Function timeout**: set to 420s (7 minutes) to accommodate `ask_claude_code`, which uses a 185s per-attempt axios timeout with 1 retry.

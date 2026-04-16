@@ -1,8 +1,0 @@
-{
-    "name": "claude-gateway",
-    "version": "1.0.0",
-    "type": "module",
-    "dependencies": {
-        "express": "^5.2.1"
-    }
-}
