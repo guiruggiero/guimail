@@ -1,9 +1,9 @@
 // Imports
 import * as Sentry from "@sentry/node";
-import {homedir} from "os";
+import {homedir} from "node:os";
 import express from "express";
 import helmet from "helmet";
-import {spawn} from "child_process";
+import {spawn} from "node:child_process";
 
 // Instrument error tracking
 Sentry.init({
@@ -21,6 +21,9 @@ const SETTINGS_PATH = `${homedir()}/.claude/settings.json`;
 const app = express();
 app.use(express.json({limit: "2mb"})); // POST request parser with size limit
 app.use(helmet()); // HTTP header security
+
+let activeRequests = 0;
+const MAX_CONCURRENCY = 3;
 
 // Run Claude Code endpoint
 app.post(process.env.CLAUDE_CODE_GATEWAY_PATH, (req, res) => {
@@ -50,6 +53,15 @@ app.post(process.env.CLAUDE_CODE_GATEWAY_PATH, (req, res) => {
   if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
     return res.status(400).send("Missing or invalid prompt");
   }
+
+  // Reject if already at capacity
+  if (activeRequests >= MAX_CONCURRENCY) {
+    Sentry.logger.warn("Gateway: request rejected, at capacity", {
+      activeRequests,
+    });
+    return res.status(429).send("Too many concurrent requests");
+  }
+  activeRequests++;
 
   Sentry.logger.info("[8c] Gateway: prompt received", {
     prompt: prompt.slice(0, 500),
@@ -81,6 +93,7 @@ app.post(process.env.CLAUDE_CODE_GATEWAY_PATH, (req, res) => {
   // Kill the process and respond with a timeout error if it runs too long
   const timer = setTimeout(() => {
     child.kill("SIGTERM");
+    activeRequests--;
     Sentry.captureException(new Error("Claude Code timed out"), {contexts: {
       prompt: prompt.slice(0, 500)
     }});
@@ -98,6 +111,7 @@ app.post(process.env.CLAUDE_CODE_GATEWAY_PATH, (req, res) => {
 
   child.on("close", (code) => {
     clearTimeout(timer);
+    activeRequests--;
     if (res.headersSent) return;
 
     if (code !== 0) {
