@@ -89,7 +89,9 @@ export const handler = async (args) => {
 
     // Fall back to solo expense if any names couldn't be resolved
     if (unknownNames.length > 0) {
-      const unknownList = unknownNames.join(", ");
+      const unknownList = unknownNames
+        .map((n) => n.charAt(0).toUpperCase() + n.slice(1))
+        .join(", ");
       const fallbackDetails = [
         args.details, `Could not resolve: ${unknownList}`,
       ].filter(Boolean).join("\n\n");
@@ -123,7 +125,9 @@ export const handler = async (args) => {
       expense: expenseResponse.data,
     });
 
-    const withNames = names.join(", ");
+    const withNames = names
+      .map((n) => n.charAt(0).toUpperCase() + n.slice(1))
+      .join(", ");
     return {
       type: "splitwiseExpense",
       text: `"${args.title}" of ${formattedAmount} added to ` +
