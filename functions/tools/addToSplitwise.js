@@ -7,7 +7,10 @@ import {
   createSharedExpense,
 } from "../utils/splitwise.js";
 
-const SPLITWISE_LINK = {url: "https://secure.splitwise.com/#/activity", label: "View in Splitwise"};
+const SPLITWISE_LINK = {
+  url: "https://secure.splitwise.com/#/activity",
+  label: "View in Splitwise",
+};
 
 export const definition = {
   name: "addToSplitwise",
@@ -97,10 +100,11 @@ export const handler = async (args) => {
       ].filter(Boolean).join("\n\n");
       const expenseResponse = await createSoloExpense(
         args.title, args.amount, args.currency, fallbackDetails);
-      Sentry.logger.info("[8] Tool: Splitwise solo expense added (unresolved names fallback)", {
-        expenseId: expenseResponse.data.expenses?.[0]?.id,
-        unknownNames,
-      });
+      Sentry.logger.info(
+        "[8] Tool: Splitwise solo expense added (unresolved names fallback)", {
+          expenseId: expenseResponse.data.expenses?.[0]?.id,
+          unknownNames,
+        });
 
       return {
         type: "splitwiseExpense",

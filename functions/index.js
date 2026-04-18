@@ -171,7 +171,8 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
       throw new Error(`Unknown tool returned: ${toolCall.name}`);
     }
 
-    Sentry.logger.info("[7] Function: Gemini called", {toolName: toolCall.name});
+    Sentry.logger.info("[7] Function: Gemini called",
+      {toolName: toolCall.name});
   } catch (error) {
     Sentry.captureException(error, {contexts: {
       geminiResult: result,

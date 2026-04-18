@@ -92,7 +92,7 @@ app.post(process.env.CLAUDE_CODE_GATEWAY_PATH, (req, res) => {
   const timer = setTimeout(() => {
     child.kill("SIGTERM"); // non-blocking, close fires later
     Sentry.captureException(new Error("Claude Code timed out"), {contexts: {
-      prompt: prompt.slice(0, 500)
+      prompt: prompt.slice(0, 500),
     }});
     if (!res.headersSent) { // Guards double reply
       res.status(504).send("Claude Code timed out");
@@ -111,7 +111,7 @@ app.post(process.env.CLAUDE_CODE_GATEWAY_PATH, (req, res) => {
   child.on("close", (code) => {
     clearTimeout(timer); // no-op if timeout already fired
     activeRequests--;
-    
+
     // Timeout already replied, nothing left to do
     if (res.headersSent) return;
 
@@ -141,7 +141,7 @@ app.post(process.env.CLAUDE_CODE_GATEWAY_PATH, (req, res) => {
       Sentry.logger.warn("Gateway: Claude Code returned non-JSON output", {
         stdout: stdout.slice(0, 500),
       });
-      
+
       return res.json({result: stdout});
     }
   });
@@ -150,7 +150,7 @@ app.post(process.env.CLAUDE_CODE_GATEWAY_PATH, (req, res) => {
 // Start the server
 const server = app.listen(process.env.EXPRESS_PORT, () => {
   console.log(`Gateway listening on port ${process.env.EXPRESS_PORT}`);
-  // Sentry.logger.info(`Gateway listening on port ${process.env.EXPRESS_PORT}`);
+  // Sentry.logger.info("Gateway listening");
 
   if (process.send) process.send("ready"); // Let PM2 know app is ready
 });
