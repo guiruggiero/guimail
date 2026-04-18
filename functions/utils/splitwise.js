@@ -49,9 +49,9 @@ export const getFriendRegistry = () => {
   let friends;
   try {
     friends = JSON.parse(raw);
-  } catch (err) {
+  } catch (error) {
     throw new Error(
-      `Failed to parse SPLITWISE_FRIENDS: ${err.message}`, {cause: err});
+      `Failed to parse SPLITWISE_FRIENDS: ${error.message}`, {cause: error});
   }
   for (const {id, name, nickname} of friends) {
     const sid = String(id);

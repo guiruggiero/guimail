@@ -2,7 +2,7 @@
 import {Type} from "@google/genai";
 
 export const definition = {
-  name: "summarize_email",
+  name: "summarizeEmail",
   description: "Creates a concise summary of the email content" +
     " in a single paragraph",
   parameters: {

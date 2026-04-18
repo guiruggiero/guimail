@@ -207,7 +207,7 @@ const modelConfig = {
     //   icsString: icsString.slice(0, 500),
     // });
   // } catch (error) {
-  //   Sentry.captureException(error, {contexts: {icsString: icsString}});
+  //   Sentry.captureException(error, {contexts: {icsString}});
   //   await Sentry.flush(2000);
 
   //   response.status(500).send("iCal creation error");
@@ -255,7 +255,7 @@ const modelConfig = {
   //   response.status(200).send(rawReply);
   //   return;
   // } catch (error) {
-  //   Sentry.captureException(error, {contexts: {rawReply: rawReply}});
+  //   Sentry.captureException(error, {contexts: {rawReply}});
   //   await Sentry.flush(2000);
 
   //   response.status(500).send("Reply creation error");

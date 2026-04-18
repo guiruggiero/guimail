@@ -11,7 +11,7 @@ const CALENDARS = {
 };
 
 export const definition = {
-  name: "add_to_calendar",
+  name: "addToCalendar",
   description: "Creates a calendar event with details extracted from the" +
     " email message including title and time, location, and description",
   parameters: {
@@ -51,7 +51,7 @@ export const definition = {
         description: "Calendar to add the event to: 'default' for Gui's" +
           " personal calendar, 'shared' for the calendar shared with Georgia",
       },
-      flight_number: {
+      flightNumber: {
         type: Type.STRING,
         description: "IATA flight number for flight events" +
           " (e.g. 'AA123'). Omit for non-flight events.",
@@ -77,9 +77,11 @@ export const handler = async (args) => {
   // Fetch calendar client and optional FlightAware URL in parallel
   const [calendar, flightAwareUrl] = await Promise.all([
     getCalendarClient(),
-    args.flight_number ?
-      getFlightAwareUrl(args.flight_number).catch((err) => {
-        Sentry.captureException(err);
+    args.flightNumber ?
+      getFlightAwareUrl(args.flightNumber).catch((error) => {
+        Sentry.captureException(error, {contexts: {
+          flightNumber: args.flightNumber,
+        }});
         return null;
       }) :
       null,
@@ -114,7 +116,7 @@ export const handler = async (args) => {
     calendarId,
     resource: eventResource,
   });
-  Sentry.logger.info("[8a] Function: Google Calendar event created", {
+  Sentry.logger.info("[8] Tool: Google Calendar event created", {
     calendarId,
     eventId: result.data.id,
   });

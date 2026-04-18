@@ -37,7 +37,11 @@ app.post(process.env.CLAUDE_CODE_GATEWAY_PATH, (req, res) => {
     if (signature !== process.env.CLAUDE_CODE_GATEWAY_SECRET) {
       throw new Error("Invalid signature");
     }
-  } catch {
+  } catch (error) {
+    Sentry.logger.warn("Gateway: unauthorized request", {
+      authHeaderPresent: !!req.headers.authorization,
+      reason: error.message,
+    });
     return res.status(401).send("Unauthorized");
   }
 
@@ -47,8 +51,8 @@ app.post(process.env.CLAUDE_CODE_GATEWAY_PATH, (req, res) => {
     return res.status(400).send("Missing or invalid prompt");
   }
 
-  Sentry.logger.info("[8c] Gateway: prompt fetched", {
-    prompt: prompt.slice(0, 200),
+  Sentry.logger.info("[8c] Gateway: prompt received", {
+    prompt: prompt.slice(0, 500),
   });
 
   // Spawn Claude Code as a child process
@@ -77,11 +81,11 @@ app.post(process.env.CLAUDE_CODE_GATEWAY_PATH, (req, res) => {
   // Kill the process and respond with a timeout error if it runs too long
   const timer = setTimeout(() => {
     child.kill("SIGTERM");
-    Sentry.captureException(new Error("Claude process timed out"), {
-      contexts: {prompt: {text: prompt.slice(0, 200)}},
-    });
+    Sentry.captureException(new Error("Claude Code timed out"), {contexts: {
+      prompt: prompt.slice(0, 500)
+    }});
     if (!res.headersSent) {
-      res.status(504).send("Claude timed out");
+      res.status(504).send("Claude Code timed out");
     }
   }, TIMEOUT_MS);
 
@@ -97,21 +101,28 @@ app.post(process.env.CLAUDE_CODE_GATEWAY_PATH, (req, res) => {
     if (res.headersSent) return;
 
     if (code !== 0) {
-      Sentry.captureException(new Error(`Claude exited ${code}`), {
-        contexts: {process: {code, stderr}},
-      });
-      return res.status(500).send("Claude process failed");
+      Sentry.captureException(new Error("Claude Code exited"), {contexts: {
+        exitCode: code,
+        stderr,
+        stdout: stdout.slice(0, 500),
+      }});
+      return res.status(500).send("Claude Code process failed");
     }
 
     // Return structured fields if JSON, otherwise return raw stdout
     try {
       const parsed = JSON.parse(stdout);
+      Sentry.logger.info("[8d] Gateway: Claude Code completed", {
+        resultLength: parsed.result?.length,
+      });
       return res.json({
         result: parsed.result,
         session_id: parsed.session_id,
-        cost_usd: parsed.cost_usd,
       });
     } catch {
+      Sentry.logger.warn("Gateway: Claude Code returned non-JSON output", {
+        stdout: stdout.slice(0, 500),
+      });
       return res.json({result: stdout});
     }
   });
@@ -124,6 +135,7 @@ app.post(process.env.CLAUDE_CODE_GATEWAY_PATH, (req, res) => {
 // Start the server
 const server = app.listen(process.env.EXPRESS_PORT, () => {
   console.log(`Gateway listening on port ${process.env.EXPRESS_PORT}`);
+  // Sentry.logger.info(`Gateway listening on port ${process.env.EXPRESS_PORT}`);
 
   if (process.send) process.send("ready"); // Let PM2 know app is ready
 });
@@ -132,6 +144,7 @@ const server = app.listen(process.env.EXPRESS_PORT, () => {
 function gracefulShutdown() {
   server.close(() => {
     console.log("Server shut down");
+    // Sentry.logger.info("Gateway: server shut down");
     process.exit(0);
   });
 }

@@ -13,7 +13,7 @@ const issuerToRow = {
 };
 
 export const definition = {
-  name: "add_to_budget",
+  name: "addToBudget",
   description: "Adds a credit card statement balance to the budget" +
     " spreadsheet",
   parameters: {
@@ -72,7 +72,11 @@ export const handler = async (args) => {
       ],
     },
   });
-  Sentry.logger.info("[8a] Function: Google Sheet updated");
+  Sentry.logger.info("[8a] Tool: Google Sheet updated", {
+    issuer: args.issuer,
+    balance: args.balance,
+    currency: args.currency,
+  });
 
   // Format balance for display
   const formattedBalance = new Intl.NumberFormat("en-US", {
@@ -89,8 +93,8 @@ export const handler = async (args) => {
     const expenseResponse = await createExpenseWithGeorgia(
       "Capital One", args.balance, args.currency);
 
-    Sentry.logger.info("[8b] Function: Splitwise expense added", {
-      expense: expenseResponse.data,
+    Sentry.logger.info("[8b] Tool: Splitwise expense added", {
+      expenseId: expenseResponse.data.expenses?.[0]?.id,
     });
 
     responseText += "\n\nExpense also added to Splitwise.";

@@ -91,9 +91,7 @@ export default Sentry.withSentry(
 
                 // Other errors
                 else Sentry.captureException(error, {contexts: {
-                    from: from,
-                    subject: subject,
-                    messageID: messageID,
+                    from, subject, messageID,
                 }});
                 ctx.waitUntil(Sentry.flush(2000));
 
@@ -109,10 +107,10 @@ export default Sentry.withSentry(
                     response.data,
                 );
 
+                await message.reply(replyMessage);
+
                 Sentry.logger.info("[11] Worker: done");
                 ctx.waitUntil(Sentry.flush(2000));
-
-                await message.reply(replyMessage);
                 return;
 
             } catch (error) {
@@ -122,7 +120,7 @@ export default Sentry.withSentry(
                 }});
                 ctx.waitUntil(Sentry.flush(2000));
 
-                message.setReject("Something went wrong. Don't worry, Gui has been notified");
+                message.setReject("Something went wrong, check Sentry");
                 return;
             }
         },

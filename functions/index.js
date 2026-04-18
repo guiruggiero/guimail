@@ -104,7 +104,7 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
   const raw = request.rawBody;
 
   // Extract body from message
-  let body = {};
+  let body;
   let messageBody;
   try {
     // Parse the message stream
@@ -116,10 +116,12 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
     if (!messageBody) throw new Error("Message has no text or HTML body");
 
     Sentry.logger.info("[5] Function: message body", {
-      messageBody: messageBody.slice(0, 1000),
+      messageBodyLength: messageBody.length,
     });
   } catch (error) {
-    Sentry.captureException(error, {contexts: {body}});
+    Sentry.captureException(error, {contexts: {
+      raw: raw.toString().slice(0, 500),
+    }});
 
     response.status(500).send("Body extraction error");
 
@@ -135,7 +137,6 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
 
     Sentry.logger.info("[6] Function: prompt fetched", {
       version: promptResponse.version,
-      prompt: instructions.slice(0, 200),
     });
   } catch (error) {
     Sentry.captureException(error);
@@ -147,7 +148,7 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
   }
 
   // Call Gemini
-  let result = {};
+  let result;
   let toolCall;
   let handler;
   try {
@@ -170,11 +171,11 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
       throw new Error(`Unknown tool returned: ${toolCall.name}`);
     }
 
-    Sentry.logger.info("[7] Function: Gemini called", {toolCall});
+    Sentry.logger.info("[7] Function: Gemini called", {toolName: toolCall.name});
   } catch (error) {
     Sentry.captureException(error, {contexts: {
       geminiResult: result,
-      messageBody: messageBody.slice(0, 1000),
+      messageBody: messageBody.slice(0, 500),
     }});
 
     response.status(502).send("Gemini call error");
@@ -184,20 +185,17 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
   }
 
   // Execute appropriate tool handler
-  let toolResult = {};
+  let toolResult;
   try {
     toolResult = await handler(toolCall.args);
-
-    Sentry.logger.info("[8] Function: tool handled", {toolResult});
   } catch (error) {
     Sentry.captureException(error, {contexts: {
       toolName: toolCall?.name,
-      toolCall: toolCall?.args,
       partialResult: toolResult,
     }});
 
     // Allow worker to retry on Google Sheets API errors
-    const errorCode = (toolCall.name === "add_to_budget") ? 502 : 500;
+    const errorCode = (toolCall.name === "addToBudget") ? 502 : 500;
     response.status(errorCode).send("Tool handler error");
 
     await Sentry.flush(2000);
@@ -255,15 +253,17 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
       });
     });
 
-    Sentry.logger.info("[9] Function: done", {toolType: toolResult.type});
-
     // Reply to message
     response.status(200).send(rawReply);
+
+    Sentry.logger.info("[9] Function: done", {toolType: toolResult.type});
 
     await Sentry.flush(2000);
     return;
   } catch (error) {
-    Sentry.captureException(error, {contexts: {toolResult}});
+    Sentry.captureException(error, {contexts: {
+      toolResultType: toolResult.type,
+    }});
 
     response.status(500).send("Reply creation error");
 

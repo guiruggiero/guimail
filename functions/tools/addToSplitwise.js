@@ -10,7 +10,7 @@ import {
 const SPLITWISE_LINK = {url: "https://secure.splitwise.com/#/activity", label: "View in Splitwise"};
 
 export const definition = {
-  name: "add_to_splitwise",
+  name: "addToSplitwise",
   description: "Adds an expense to Splitwise to be shared with other people",
   parameters: {
     type: Type.OBJECT,
@@ -33,13 +33,13 @@ export const definition = {
         description: "Any remaining context about the expense " +
           "not captured by other fields",
       },
-      split_with: {
+      splitWith: {
         type: Type.ARRAY,
         items: {type: Type.STRING},
         description: "Lowercase names of friends to split with " +
           "(e.g., [\"georgia\", \"panda\"]). Omit to log for yourself only.",
       },
-      paid_by: {
+      paidBy: {
         type: Type.STRING,
         description: "Lowercase name of who paid (e.g., \"georgia\"). " +
           "Defaults to \"gui\" if omitted.",
@@ -67,13 +67,13 @@ export const handler = async (args) => {
     currency: args.currency,
   }).format(args.amount);
 
-  const names = (args.split_with ?? []).map((n) => n.toLowerCase());
+  const names = (args.splitWith ?? []).map((n) => n.toLowerCase());
 
   if (names.length > 0) {
     const friends = getFriendRegistry();
 
     // Resolve payer ID (defaults to Gui)
-    const payerName = args.paid_by?.toLowerCase();
+    const payerName = args.paidBy?.toLowerCase();
     const payerId = payerName ?
       friends.get(payerName) : process.env.SPLITWISE_ID_GUI;
     if (!payerId) throw new Error(`Unknown payer: ${payerName ?? "Gui"}`);
@@ -95,8 +95,8 @@ export const handler = async (args) => {
       ].filter(Boolean).join("\n\n");
       const expenseResponse = await createSoloExpense(
         args.title, args.amount, args.currency, fallbackDetails);
-      Sentry.logger.info("[8a] Function: Splitwise expense added", {
-        expense: expenseResponse.data,
+      Sentry.logger.info("[8] Tool: Splitwise solo expense added (unresolved names fallback)", {
+        expenseId: expenseResponse.data.expenses?.[0]?.id,
         unknownNames,
       });
 
@@ -119,7 +119,7 @@ export const handler = async (args) => {
       args.title, args.amount, args.currency, otherIds, payerId,
       args.details);
 
-    Sentry.logger.info("[8b] Function: Splitwise expense added", {
+    Sentry.logger.info("[8] Tool: Splitwise shared expense added", {
       expense: expenseResponse.data,
     });
 
@@ -136,7 +136,7 @@ export const handler = async (args) => {
   // Solo log — no co-payers
   const expenseResponse = await createSoloExpense(
     args.title, args.amount, args.currency, args.details);
-  Sentry.logger.info("[8c] Function: Splitwise expense added", {
+  Sentry.logger.info("[8] Tool: Splitwise solo expense added", {
     expense: expenseResponse.data,
   });
 
