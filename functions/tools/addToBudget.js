@@ -101,7 +101,7 @@ export const handler = async (args) => {
   }
 
   return {
-    type: "budget_update",
+    type: "budgetUpdate",
     text: responseText,
     confidence: Math.round(args.confidence * 100),
   };

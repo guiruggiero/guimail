@@ -101,9 +101,9 @@ export const handler = async (args) => {
       });
 
       return {
-        type: "splitwise_expense",
+        type: "splitwiseExpense",
         text: `"${args.title}" of ${formattedAmount} added to ` +
-          `Splitwise (solo — could not find: ${unknownList}).` +
+          `Splitwise (solo, could not find: ${unknownList}).` +
           "\n\nOpen Splitwise to add the missing people to this expense.",
         link: SPLITWISE_LINK,
         confidence,
@@ -125,7 +125,7 @@ export const handler = async (args) => {
 
     const withNames = names.join(", ");
     return {
-      type: "splitwise_expense",
+      type: "splitwiseExpense",
       text: `"${args.title}" of ${formattedAmount} added to ` +
         `Splitwise (split with ${withNames}).`,
       link: SPLITWISE_LINK,
@@ -133,7 +133,7 @@ export const handler = async (args) => {
     };
   }
 
-  // Solo log — no co-payers
+  // Solo log, no co-payers
   const expenseResponse = await createSoloExpense(
     args.title, args.amount, args.currency, args.details);
   Sentry.logger.info("[8] Tool: Splitwise solo expense added", {
@@ -141,7 +141,7 @@ export const handler = async (args) => {
   });
 
   return {
-    type: "splitwise_expense",
+    type: "splitwiseExpense",
     text: `"${args.title}" of ${formattedAmount} added to Splitwise.` +
       `\n\nDetails: ${args.details}`,
     link: SPLITWISE_LINK,

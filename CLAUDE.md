@@ -71,7 +71,7 @@ All tools with data extraction include a `confidence` field; handlers reject cal
 
 **Utilities** (each in `functions/utils/`):
 - `axiosClient.js` — `createRetryClient(config, retries = 2)`: shared axios+retry factory (exponential backoff, network/5xx); used by `splitwise.js`, `flightAware.js`, and `claudeCode.js`
-- `claudeCode.js` — axios client for the Claude Code Gateway (185s timeout, 1 retry), `runPrompt(prompt)`: POSTs to `POST /run` and returns `{result, session_id}`
+- `claudeCode.js` — axios client for the Claude Code Gateway (185s timeout, 1 retry), `runPrompt(prompt)`: POSTs to `POST /run` and returns `{result, sessionId}`
 - `googleAuth.js` — `KEY_FILE`, `GOOGLE_RETRY_CONFIG`, `getGoogleAuth(scopes)`: shared Google service account auth; used by `googleCalendar.js` and `googleSheets.js`
 - `splitwise.js` — `getFriendRegistry` (reads `SPLITWISE_FRIENDS` env var; indexes by first name, full name, and nickname tokens), `createSoloExpense`, `createSharedExpense` (accepts optional `details` param), `createExpenseWithGeorgia`; `checkSplitwiseError` and `splitEqual` are internal helpers (not exported)
 - `flightAware.js` — axios client, `getFlightAwareUrl`

@@ -29,7 +29,7 @@ const email = fs.readFileSync("email.txt", "utf8");
 
 // Model tool
 const createCalendarEvent = {
-  name: "create_calendar_event",
+  name: "createCalendarEvent",
   description: "Creates a calendar event with details extracted from the" +
     " email message including title and time, location, and description",
   parameters: {
@@ -162,7 +162,7 @@ const modelConfig = {
       throw new Error("Model did not return a function call");
     }
     const toolCall = result.functionCalls[0];
-    if (toolCall.name !== "create_calendar_event") {
+    if (toolCall.name !== "createCalendarEvent") {
       throw new Error(`Unexpected function call: ${toolCall.name}`);
     }
     // console.log(toolCall);

@@ -125,7 +125,7 @@ export const handler = async (args) => {
     "G plus G" : "personal";
 
   return {
-    type: "calendar_event",
+    type: "calendarEvent",
     text: `Event "${args.summary}" added to ${calendarLabel} calendar.`,
     link: {
       url: result.data.htmlLink,

@@ -48,14 +48,17 @@ export const handler = async (args) => {
 
   // Call Claude Code Gateway
   Sentry.logger.info("[8a] Tool: Claude Code Gateway called");
-  const {result, session_id: sessionId} = await runPrompt(prompt);
+  const {
+    result,
+    // sessionId, // TODO: multi-turn interactions
+  } = await runPrompt(prompt);
 
   if (!result) {
     throw new Error("Claude Code returned an empty result");
   }
 
   return {
-    type: "claude_code_response",
+    type: "claudeCodeResponse",
     text: result,
   };
 };

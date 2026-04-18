@@ -45,6 +45,7 @@ app.post(process.env.CLAUDE_CODE_GATEWAY_PATH, (req, res) => {
       authHeaderPresent: !!req.headers.authorization,
       reason: error.message,
     });
+
     return res.status(401).send("Unauthorized");
   }
 
@@ -59,6 +60,7 @@ app.post(process.env.CLAUDE_CODE_GATEWAY_PATH, (req, res) => {
     Sentry.logger.warn("Gateway: request rejected, at capacity", {
       activeRequests,
     });
+
     return res.status(429).send("Too many concurrent requests");
   }
   activeRequests++;
@@ -86,22 +88,18 @@ app.post(process.env.CLAUDE_CODE_GATEWAY_PATH, (req, res) => {
   let stdout = "";
   let stderr = "";
 
-
-  // --- TO BE REVIEWED --- START (TODO)
-
-
-  // Kill the process and respond with a timeout error if it runs too long
+  // Kill the child and send 504 if it runs too long; close event still fires
   const timer = setTimeout(() => {
-    child.kill("SIGTERM");
-    activeRequests--;
+    child.kill("SIGTERM"); // non-blocking, close fires later
     Sentry.captureException(new Error("Claude Code timed out"), {contexts: {
       prompt: prompt.slice(0, 500)
     }});
-    if (!res.headersSent) {
+    if (!res.headersSent) { // Guards double reply
       res.status(504).send("Claude Code timed out");
     }
   }, TIMEOUT_MS);
 
+  // Buffer output chunks as they stream in
   child.stdout.on("data", (data) => {
     stdout += data.toString();
   });
@@ -109,9 +107,12 @@ app.post(process.env.CLAUDE_CODE_GATEWAY_PATH, (req, res) => {
     stderr += data.toString();
   });
 
+  // Fires when the child exits (normally or after SIGTERM)
   child.on("close", (code) => {
-    clearTimeout(timer);
+    clearTimeout(timer); // no-op if timeout already fired
     activeRequests--;
+    
+    // Timeout already replied, nothing left to do
     if (res.headersSent) return;
 
     if (code !== 0) {
@@ -120,6 +121,7 @@ app.post(process.env.CLAUDE_CODE_GATEWAY_PATH, (req, res) => {
         stderr,
         stdout: stdout.slice(0, 500),
       }});
+
       return res.status(500).send("Claude Code process failed");
     }
 
@@ -129,22 +131,21 @@ app.post(process.env.CLAUDE_CODE_GATEWAY_PATH, (req, res) => {
       Sentry.logger.info("[8d] Gateway: Claude Code completed", {
         resultLength: parsed.result?.length,
       });
+
       return res.json({
         result: parsed.result,
-        session_id: parsed.session_id,
+        sessionId: parsed.session_id,
       });
     } catch {
+      // Claude Code didn't return JSON, pass raw output through
       Sentry.logger.warn("Gateway: Claude Code returned non-JSON output", {
         stdout: stdout.slice(0, 500),
       });
+      
       return res.json({result: stdout});
     }
   });
 });
-
-
-// --- TO BE REVIEWED --- END
-
 
 // Start the server
 const server = app.listen(process.env.EXPRESS_PORT, () => {
@@ -156,9 +157,11 @@ const server = app.listen(process.env.EXPRESS_PORT, () => {
 
 // Graceful shutdown
 function gracefulShutdown() {
-  server.close(() => {
+  server.close(async () => {
     console.log("Server shut down");
     // Sentry.logger.info("Gateway: server shut down");
+
+    await Sentry.flush(2000);
     process.exit(0);
   });
 }

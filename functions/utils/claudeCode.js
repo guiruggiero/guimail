@@ -16,6 +16,6 @@ export const runPrompt = async (prompt) => {
   const res = await gatewayClient.post("/run", {prompt});
   return {
     result: res.data.result,
-    session_id: res.data.session_id,
+    sessionId: res.data.sessionId,
   };
 };

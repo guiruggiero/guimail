@@ -18,15 +18,15 @@ const pull = async () => {
   try {
     localContent = readFileSync(PROMPT_FILE, "utf-8");
   } catch {
-    // File doesn't exist yet — skip diff
+    // File doesn't exist yet, skip diff
   }
 
   const {prompt, version} = await getPrompt("Guimail");
 
   // Show diff between local and production
   if (localContent !== null) {
-    const tmpOld = path.join(os.tmpdir(), "prompt_old.md");
-    const tmpNew = path.join(os.tmpdir(), "prompt_new.md");
+    const tmpOld = path.join(os.tmpdir(), "promptOld.md");
+    const tmpNew = path.join(os.tmpdir(), "promptNew.md");
     writeFileSync(tmpOld, localContent);
     writeFileSync(tmpNew, prompt);
     const result = spawnSync("diff", ["-u", tmpOld, tmpNew], {
