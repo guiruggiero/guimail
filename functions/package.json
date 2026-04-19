@@ -34,6 +34,8 @@
     "deploy": "npx firebase deploy --only functions:guimail",
     "prompt-pull": "node --env-file=.env scripts/prompt.js pull",
     "prompt-push": "node --env-file=.env scripts/prompt.js push",
-    "friends": "node scripts/friends.js"
+    "friends": "node scripts/friends.js",
+    "start": "node --env-file=.env scripts/claudeCodeGateway.js",
+    "pm2": "pm2 startOrRestart scripts/pm2.config.js"
   }
 }

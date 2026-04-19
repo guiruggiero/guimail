@@ -15,7 +15,6 @@ Sentry.init({
 
 // Configuration
 const TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes
-const SETTINGS_PATH = `${homedir()}/.claude/settings.json`;
 
 // Initialize server and middleware
 const app = express();
@@ -74,14 +73,10 @@ app.post(process.env.CLAUDE_CODE_GATEWAY_PATH, (req, res) => {
     "claude",
     [
       "-p", prompt,
-      "--bare",
-      "--settings", SETTINGS_PATH,
-      "--permission-mode", "dontAsk",
       "--output-format", "json",
     ],
     {
       cwd: homedir(),
-      env: process.env,
     },
   );
 
@@ -149,8 +144,8 @@ app.post(process.env.CLAUDE_CODE_GATEWAY_PATH, (req, res) => {
 
 // Start the server
 const server = app.listen(process.env.EXPRESS_PORT, () => {
-  console.log(`Gateway listening on port ${process.env.EXPRESS_PORT}`);
-  // Sentry.logger.info("Gateway listening");
+  // console.log(`Gateway listening on port ${process.env.EXPRESS_PORT}`);
+  Sentry.logger.info("Gateway: up and listening");
 
   if (process.send) process.send("ready"); // Let PM2 know app is ready
 });
@@ -158,8 +153,8 @@ const server = app.listen(process.env.EXPRESS_PORT, () => {
 // Graceful shutdown
 function gracefulShutdown() {
   server.close(async () => {
-    console.log("Server shut down");
-    // Sentry.logger.info("Gateway: server shut down");
+    // console.log(" Server shut down");
+    Sentry.logger.info("Gateway: server shut down");
 
     await Sentry.flush(2000);
     process.exit(0);
