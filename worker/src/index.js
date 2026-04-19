@@ -12,7 +12,7 @@ let allowedSenders;
 // Axios instance
 const axiosInstance = axios.create({
     baseURL: cloudFunctionURL,
-    timeout: 90000, // 1m30s
+    timeout: 430000, // slightly over Firebase's 420s max
 });
 
 // Retry configuration
