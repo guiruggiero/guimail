@@ -10,7 +10,7 @@ export const apps = [
     cwd: functionsDir,
     script: "npm",
     args: "start",
-    max_memory_restart: "150M",
+    max_memory_restart: "100M",
     log_file: resolve(dir, "claudeCodeGateway.log"),
     time: true,
     wait_ready: true,
