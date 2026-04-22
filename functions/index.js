@@ -215,8 +215,9 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
     // Build plain text and HTML sections in standard order:
     // main text → optional link → optional confidence → sign-off
     const textSections = [toolResult.text];
-    const htmlSections = toolResult.text.split("\n\n")
-      .map((s) => `<p>${s}</p>`);
+    const htmlSections = toolResult.html ?
+      [toolResult.html] :
+      toolResult.text.split("\n\n").map((s) => `<p>${s}</p>`);
 
     if (toolResult.link) {
       textSections.push(toolResult.link.url);

@@ -2,6 +2,8 @@
 import * as Sentry from "@sentry/node";
 import {Type} from "@google/genai";
 import {runPrompt} from "../utils/claudeCode.js";
+import {marked} from "marked";
+import removeMarkdown from "remove-markdown";
 
 export const definition = {
   name: "askClaudeCode",
@@ -59,6 +61,7 @@ export const handler = async (args) => {
 
   return {
     type: "claudeCodeResponse",
-    text: result,
+    text: removeMarkdown(result),
+    html: marked(result),
   };
 };
