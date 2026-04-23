@@ -5,6 +5,7 @@ updates:
     directories:
       - /worker
       - /functions
+      - /gateway
     schedule:
       interval: weekly
       day: saturday
