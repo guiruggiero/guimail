@@ -18,7 +18,7 @@ const TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes
 
 // Initialize server and middleware
 const app = express();
-app.use(express.json({limit: "2mb"})); // POST request parser with size limit
+app.use(express.json({limit: "5mb"})); // POST request parser with size limit
 app.use(helmet()); // HTTP header security
 
 let activeRequests = 0;
