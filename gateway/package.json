@@ -1,0 +1,26 @@
+{
+    "name": "gateway",
+    "author": "Gui Ruggiero",
+    "homepage": "https://guiruggiero.com/",
+	"version": "1.0",
+    "type": "module",
+    "main": "index.js",
+    "dependencies": {
+        "@sentry/node": "^10.48.0",
+        "express": "^5.2.1",
+        "helmet": "^8.1.0"
+    },
+    "devDependencies": {
+        "@eslint/js": "^10.0.1",
+        "@stylistic/eslint-plugin": "^5.9.0",
+        "eslint": "^10.2.1",
+        "globals": "^17.5.0"
+    },
+    "scripts": {
+        "lint": "eslint .",
+        "lint-fix": "eslint . --fix",
+        "start": "node --env-file=.env index.js",
+        "pm2": "pm2 restart claudeCodeGateway",
+        "pm2-config": "pm2 stop all && pm2 delete claudeCodeGateway && pm2 start pm2.config.js && pm2 save"
+    }
+}

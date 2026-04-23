@@ -4,19 +4,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-**Functions** (`functions/` directory):
-```bash
-npm run lint         # ESLint check
-npm run lint-fix     # ESLint with auto-fix
-npm run deploy       # Deploy to Firebase Cloud Functions (runs lint first)
-npm run prompt-pull  # Download production prompt from Langfuse → prompt.md
-npm run prompt-push  # Upload prompt.md to Langfuse as new version, not production
-npm run friends      # Minify functions/scripts/friends.json → SPLITWISE_FRIENDS in .env
-npm start            # Run Claude Code Gateway locally (direct, no PM2)
-npm run pm2          # Restart Claude Code Gateway via PM2 (JS/dependency changes)
-npm run pm2-config   # Full stop/delete/start cycle via PM2 (pm2.config.js changes)
-```
-
 **Worker** (`worker/` directory):
 ```bash
 npm run lint      # ESLint check
@@ -25,6 +12,25 @@ npm run deploy    # Deploy to Cloudflare Worker via wrangler
 npm run update    # Update wrangler to latest
 npm run whoami    # Check authenticated Cloudflare account
 npm run secret    # Manage Cloudflare Worker secrets (put/delete)
+```
+
+**Functions** (`functions/` directory):
+```bash
+npm run lint         # ESLint check
+npm run lint-fix     # ESLint with auto-fix
+npm run deploy       # Deploy to Firebase Cloud Functions (runs lint first)
+npm run prompt-pull  # Download production prompt from Langfuse → prompt.md
+npm run prompt-push  # Upload prompt.md to Langfuse as new version, not production
+npm run friends      # Minify functions/scripts/friends.json → SPLITWISE_FRIENDS in .env
+```
+
+**Gateway** (`gateway/` directory):
+```bash
+npm run lint         # ESLint check
+npm run lint-fix     # ESLint with auto-fix
+npm start            # Run Claude Code Gateway locally (direct, no PM2)
+npm run pm2          # Restart Claude Code Gateway via PM2 (JS/dependency changes)
+npm run pm2-config   # Full stop/delete/start cycle via PM2 (pm2.config.js changes)
 ```
 
 Never modify files in `tests/` — these are manual scripts for local use only.
@@ -42,7 +48,7 @@ Receives emails via Cloudflare Email Routing. Pipeline:
 5. Sends the raw RFC 2822 reply from the function back to the sender via `message.reply()`
 
 **Required env vars:**
-- `SENTRY_DSN`, `WORKER_SECRET`, `EMAIL_GUIMAIL`, `EMAIL_GUI`, `EMAIL_GUI_AUTO_FWD`, `EMAIL_UM`, `EMAIL_GEORGIA`
+- `SENTRY_DSN`, `WORKER_SECRET`, `EMAIL_GUIMAIL`, `EMAIL_GUI`, `EMAIL_GUI_AUTO_FWD`, `EMAIL_UM`
 - Set as Cloudflare Worker secrets via `npm run secret`.
 
 ### Firebase Cloud Function (`functions/`)
@@ -83,9 +89,9 @@ All tools with data extraction include a `confidence` field; handlers reject cal
 
 **Prompt management**: `functions/prompt.md` is the system prompt managed via the scripts above and excluded from regular commits. Always perform changes to the system prompt, but never consider it in the commit message. Scripts require `LANGFUSE_SECRET_KEY` and `LANGFUSE_PUBLIC_KEY` in `functions/.env` (gitignored).
 
-**Local scripts** (`functions/scripts/`): utility scripts not deployed with the function; run locally via npm scripts. Includes `prompt.js` (Langfuse prompt pull/push), `friends.json` (the friends registry source of truth), `friends.js` (syncs it to `.env`), and `claudeCodeGateway.js` (the Claude Code Gateway server — see below).
+**Local scripts** (`functions/scripts/`): utility scripts not deployed with the function; run locally via npm scripts. Includes `prompt.js` (Langfuse prompt pull/push), `friends.json` (the friends registry source of truth), and `friends.js` (syncs it to `.env`).
 
-**Claude Code Gateway** (`functions/scripts/claudeCodeGateway.js`): Express server (5mb request body limit) that spawns `claude -p` as a child process and exposes it as an HTTP endpoint for the `askClaudeCode` tool handler. Authenticates via `CLAUDE_CODE_GATEWAY_SECRET`, enforces a 3-minute timeout and `MAX_CONCURRENCY = 3`, and sends `process.send("ready")` for PM2 readiness detection. Supports multi-turn sessions: accepts optional `sessionId` and `resumePrompt` in the request body; resumes via `claude --resume <sessionId> -p <resumePrompt>`; falls back to a fresh session if resume fails (expired or missing session ID). Requires `CLAUDE_CODE_GATEWAY_PATH`, `CLAUDE_CODE_GATEWAY_SECRET`, `EXPRESS_PORT`, and `SENTRY_DSN` env vars. Managed by PM2 via `scripts/pm2.config.js` (app name: `claudeCodeGateway`); `npm run pm2` restarts the process (sufficient for JS or dependency changes); `npm run pm2-config` does a full stop/delete/start/save cycle (needed when `pm2.config.js` itself changes). Run directly (no PM2) with `npm start`.
+**Claude Code Gateway** (`gateway/index.js`): Express server (5mb request body limit) that spawns `claude -p` as a child process and exposes it as an HTTP endpoint for the `askClaudeCode` tool handler. Authenticates via `CLAUDE_CODE_GATEWAY_SECRET`, enforces a 3-minute timeout and `MAX_CONCURRENCY = 3`, and sends `process.send("ready")` for PM2 readiness detection. Supports multi-turn sessions: accepts optional `sessionId` and `resumePrompt` in the request body; resumes via `claude --resume <sessionId> -p <resumePrompt>`; falls back to a fresh session if resume fails (expired or missing session ID). Requires `CLAUDE_CODE_GATEWAY_PATH`, `CLAUDE_CODE_GATEWAY_SECRET`, `EXPRESS_PORT`, and `SENTRY_DSN` env vars in `gateway/.env` (gitignored). Managed by PM2 via `gateway/pm2.config.js` (app name: `claudeCodeGateway`); `npm run pm2` restarts the process (sufficient for JS or dependency changes); `npm run pm2-config` does a full stop/delete/start/save cycle (needed when `pm2.config.js` itself changes). Run directly (no PM2) with `npm start`.
 
 **Function timeout**: set to 420s (7 minutes) to accommodate `askClaudeCode`, which uses a 185s per-attempt axios timeout with 1 retry.
 
@@ -95,4 +101,5 @@ All tools with data extraction include a `confidence` field; handlers reject cal
 
 ## Code Style
 
-- Max line length: 80 characters (enforced by ESLint Google style config, `functions/` only).
+- Max line length: 80 characters (enforced by ESLint Google style config, `functions/` only)
+- `gateway/` uses the same ESLint style as `worker/` (4-space indent, `@stylistic/eslint-plugin`)

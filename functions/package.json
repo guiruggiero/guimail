@@ -25,10 +25,8 @@
     "@eslint/js": "^10.0.1",
     "eslint": "^10.2.1",
     "eslint-config-google": "^0.14.0",
-    "express": "^5.2.1",
     "firebase-tools": "^15.14.0",
-    "globals": "^17.5.0",
-    "helmet": "^8.1.0"
+    "globals": "^17.5.0"
   },
   "scripts": {
     "lint": "eslint .",
@@ -36,9 +34,6 @@
     "deploy": "npx firebase deploy --only functions:guimail",
     "prompt-pull": "node --env-file=.env scripts/prompt.js pull",
     "prompt-push": "node --env-file=.env scripts/prompt.js push",
-    "friends": "node scripts/friends.js",
-    "start": "node --env-file=.env scripts/claudeCodeGateway.js",
-    "pm2": "pm2 restart claudeCodeGateway",
-    "pm2-config": "pm2 stop all && pm2 delete claudeCodeGateway && pm2 start scripts/pm2.config.js && pm2 save"
+    "friends": "node scripts/friends.js"
   }
 }

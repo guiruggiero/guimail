@@ -4,4 +4,4 @@ service-account-key.json
 prompt.md
 .env
 friends.json
-claudeCodeGateway.log
+gateway.log
