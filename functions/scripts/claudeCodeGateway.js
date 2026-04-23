@@ -89,8 +89,12 @@ app.post(process.env.CLAUDE_CODE_GATEWAY_PATH, async (req, res) => {
     }, TIMEOUT_MS);
 
     // Buffer output chunks as they stream in
-    child.stdout.on("data", (d) => {chunks.push(d);});
-    child.stderr.on("data", (d) => {stderr += d.toString();});
+    child.stdout.on("data", (d) => {
+      chunks.push(d);
+    });
+    child.stderr.on("data", (d) => {
+      stderr += d.toString();
+    });
 
     // Binary can't be spawned (not found, permission denied)
     child.on("error", (error) => {
@@ -165,7 +169,6 @@ app.post(process.env.CLAUDE_CODE_GATEWAY_PATH, async (req, res) => {
       res.status(500).send("Claude Code process failed");
     }
   } finally {
-
     // Always release the concurrency slot, on every exit path
     activeRequests--;
   }

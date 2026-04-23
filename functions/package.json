@@ -38,6 +38,7 @@
     "prompt-push": "node --env-file=.env scripts/prompt.js push",
     "friends": "node scripts/friends.js",
     "start": "node --env-file=.env scripts/claudeCodeGateway.js",
-    "pm2": "pm2 startOrRestart scripts/pm2.config.js"
+    "pm2": "pm2 restart claudeCodeGateway",
+    "pm2-config": "pm2 stop all && pm2 delete claudeCodeGateway && pm2 start scripts/pm2.config.js && pm2 save"
   }
 }

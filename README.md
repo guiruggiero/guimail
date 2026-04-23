@@ -21,7 +21,7 @@ An intelligent multi-purpose email processing AI agent. Forward any email to Gui
 - **Email summarization** for quick insights from lengthy content
 - **Budget tracking** with Google Sheets
 - **Expense splitting** with Splitwise
-- **Claude Code integration** for running development tasks against your own dev server via a self-hosted gateway
+- **Claude Code integration** for running development tasks against your own dev server via a self-hosted gateway, with **multi-turn session support** for follow-up requests
 - **Helpful responses** with proper **email threading**
 - **Multi-tool AI agent** using Gemini Flash model through the Gemini API with extensible architecture for easy addition of new features
 - **Sender authentication** with allowlist and **email size validation**
@@ -57,6 +57,7 @@ There are two main components:
 - `eslint` and `stylistic` - code linting
 - `firebase-functions` - serverless backend
 - `googleapis` - integration with Google Sheets and Calendar APIs
+- `marked` and `remove-markdown` - markdown rendering and stripping for Claude Code replies
 - `nodemailer` - email composition
 - `postal-mime` - email parsing and content extraction
 - `wrangler` and `firebase-tools` - deployment and management

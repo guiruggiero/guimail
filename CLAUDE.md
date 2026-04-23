@@ -13,7 +13,8 @@ npm run prompt-pull  # Download production prompt from Langfuse → prompt.md
 npm run prompt-push  # Upload prompt.md to Langfuse as new version, not production
 npm run friends      # Minify functions/scripts/friends.json → SPLITWISE_FRIENDS in .env
 npm start            # Run Claude Code Gateway locally (direct, no PM2)
-npm run pm2          # Start/restart Claude Code Gateway via PM2
+npm run pm2          # Restart Claude Code Gateway via PM2 (JS/dependency changes)
+npm run pm2-config   # Full stop/delete/start cycle via PM2 (pm2.config.js changes)
 ```
 
 **Worker** (`worker/` directory):
@@ -36,8 +37,8 @@ Guimail processes emails forwarded by a user. Two components work in sequence:
 Receives emails via Cloudflare Email Routing. Pipeline:
 1. Validates sender against allowlist (built lazily from env vars, not available at module scope; rejects with `setReject`)
 2. Enforces 5MB size limit (rejects oversized emails)
-3. Extracts `subject`, `messageID`, and `references` headers from the raw message
-4. POSTs the raw email body (octet stream) to the Firebase Cloud Function with `WORKER_SECRET` auth and metadata as query params
+3. Extracts `subject`, `messageID`, `references`, and `X-Guimail-Session` headers from the raw message
+4. POSTs the raw email body (octet stream) to the Firebase Cloud Function with `WORKER_SECRET` auth and metadata as query params (includes `sessionId` from `X-Guimail-Session` if present, enabling multi-turn Claude Code sessions)
 5. Sends the raw RFC 2822 reply from the function back to the sender via `message.reply()`
 
 **Required env vars:**
@@ -62,15 +63,15 @@ Single exported function `guimail` in `index.js`. Pipeline:
 - `summarizeEmail` — returns the summary text
 - `addToBudget` — writes to a Google Sheet via `googleSheets.js`; also creates a Splitwise expense automatically if the issuer is Capital One
 - `addToSplitwise` — creates a Splitwise expense via `createSoloExpense` or `createSharedExpense`; accepts optional `splitWith` (array of friend names) and `paidBy` (name of payer, defaults to Gui via `SPLITWISE_ID_GUI`); resolves names to Splitwise user IDs via `getFriendRegistry()`; if any name can't be resolved, falls back to a solo expense with a note in the details prompting manual editing in the app; splits equally among all participants; returns `toolResult.link` as `{url, label}` for a clickable "View in Splitwise" link using the expense ID from the API response
-- `askClaudeCode` — forwards a coding task to the Claude Code Gateway (`claudeCode.js`); Gemini extracts `typedInstruction` (verbatim, up to the forwarded message separator) and optional `forwardedContent` (HTML-stripped forwarded email body); assembles these into a prompt and POSTs to `POST /run` on the gateway; throws on empty result; no `link` or `confidence` in the reply
+- `askClaudeCode` — forwards a coding task to the Claude Code Gateway (`claudeCode.js`); Gemini extracts `typedInstruction` (verbatim, up to the forwarded message separator) and optional `forwardedContent` (HTML-stripped forwarded email body); on a fresh session assembles both into a full prompt, on a resume only sends `typedInstruction` (Claude Code already has prior context); POSTs to `POST /run` on the gateway; throws on empty result; returns `text` (markdown stripped via `remove-markdown`) and `html` (rendered via `marked`) so reply emails render formatting correctly; returns `sessionId` (propagated to the reply as `X-Guimail-Session` header so the next forwarded reply can resume the same session); no `link` or `confidence` in the reply
 
-All tools with data extraction include a `confidence` field; handlers reject calls below 0.5. Tool handlers return `{ type, text, link?, confidence? }` where `text` is the main action sentence(s) only (paragraphs separated by `\n\n`), `link` is `{url, label}` when applicable, and `confidence` is an integer percentage. `index.js` assembles these into both `text` and `html` reply parts in a consistent order: main text → link → confidence → sign-off.
+All tools with data extraction include a `confidence` field; handlers reject calls below 0.5. Tool handlers return `{ type, text, html?, link?, confidence?, sessionId? }` where `text` is the main action sentence(s) only (paragraphs separated by `\n\n`), `html` is a pre-rendered HTML string (used by `askClaudeCode` to preserve markdown formatting), `link` is `{url, label}` when applicable, `confidence` is an integer percentage, and `sessionId` is a Claude Code session ID when applicable. `index.js` assembles these into both `text` and `html` reply parts in a consistent order: main text → link → confidence → sign-off; uses `toolResult.html` directly for the HTML part when provided.
 
 **Adding a new tool**: create `functions/tools/<name>.js` with `definition` and `handler` exports, then add both to `functionDeclarations` and `toolHandlers` in `index.js`. No other registration needed.
 
 **Utilities** (each in `functions/utils/`):
 - `axiosClient.js` — `createRetryClient(config, retries = 2)`: shared axios+retry factory (exponential backoff, network/5xx); used by `splitwise.js`, `flightAware.js`, and `claudeCode.js`
-- `claudeCode.js` — axios client for the Claude Code Gateway (185s timeout, 1 retry), `runPrompt(prompt)`: POSTs to `POST /run` and returns `{result, sessionId}`
+- `claudeCode.js` — axios client for the Claude Code Gateway (185s timeout, 1 retry), `runPrompt(prompt, sessionId?, resumePrompt?)`: POSTs to `POST /run` and returns `{result, sessionId}`
 - `googleAuth.js` — `KEY_FILE`, `GOOGLE_RETRY_CONFIG`, `getGoogleAuth(scopes)`: shared Google service account auth; used by `googleCalendar.js` and `googleSheets.js`
 - `splitwise.js` — `getFriendRegistry` (reads `SPLITWISE_FRIENDS` env var; indexes by first name, full name, and nickname tokens), `createSoloExpense`, `createSharedExpense` (accepts optional `details` param), `createExpenseWithGeorgia`; `checkSplitwiseError` and `splitEqual` are internal helpers (not exported)
 - `flightAware.js` — axios client, `getFlightAwareUrl`
@@ -84,7 +85,7 @@ All tools with data extraction include a `confidence` field; handlers reject cal
 
 **Local scripts** (`functions/scripts/`): utility scripts not deployed with the function; run locally via npm scripts. Includes `prompt.js` (Langfuse prompt pull/push), `friends.json` (the friends registry source of truth), `friends.js` (syncs it to `.env`), and `claudeCodeGateway.js` (the Claude Code Gateway server — see below).
 
-**Claude Code Gateway** (`functions/scripts/claudeCodeGateway.js`): Express server that spawns `claude -p` as a child process and exposes it as an HTTP endpoint for the `askClaudeCode` tool handler. Authenticates via `CLAUDE_CODE_GATEWAY_SECRET`, enforces a 3-minute timeout and `MAX_CONCURRENCY = 3`, and sends `process.send("ready")` for PM2 readiness detection. Requires `CLAUDE_CODE_GATEWAY_PATH`, `CLAUDE_CODE_GATEWAY_SECRET`, `EXPRESS_PORT`, and `SENTRY_DSN` env vars. Managed by PM2 via `scripts/pm2.config.js` (app name: `claudeCodeGateway`); start/restart with `npm run pm2`, or run directly with `npm start`.
+**Claude Code Gateway** (`functions/scripts/claudeCodeGateway.js`): Express server (5mb request body limit) that spawns `claude -p` as a child process and exposes it as an HTTP endpoint for the `askClaudeCode` tool handler. Authenticates via `CLAUDE_CODE_GATEWAY_SECRET`, enforces a 3-minute timeout and `MAX_CONCURRENCY = 3`, and sends `process.send("ready")` for PM2 readiness detection. Supports multi-turn sessions: accepts optional `sessionId` and `resumePrompt` in the request body; resumes via `claude --resume <sessionId> -p <resumePrompt>`; falls back to a fresh session if resume fails (expired or missing session ID). Requires `CLAUDE_CODE_GATEWAY_PATH`, `CLAUDE_CODE_GATEWAY_SECRET`, `EXPRESS_PORT`, and `SENTRY_DSN` env vars. Managed by PM2 via `scripts/pm2.config.js` (app name: `claudeCodeGateway`); `npm run pm2` restarts the process (sufficient for JS or dependency changes); `npm run pm2-config` does a full stop/delete/start/save cycle (needed when `pm2.config.js` itself changes). Run directly (no PM2) with `npm start`.
 
 **Function timeout**: set to 420s (7 minutes) to accommodate `askClaudeCode`, which uses a 185s per-attempt axios timeout with 1 retry.
 
