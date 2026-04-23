@@ -99,7 +99,7 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
 
   // Extract information from request
   const {
-    from, subject: originalSubject, messageID, references,
+    from, subject: originalSubject, messageID, references, sessionId,
   } = request.query;
   const raw = request.rawBody;
 
@@ -188,7 +188,7 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
   // Execute appropriate tool handler
   let toolResult;
   try {
-    toolResult = await handler(toolCall.args);
+    toolResult = await handler(toolCall.args, {sessionId});
   } catch (error) {
     Sentry.captureException(error, {contexts: {
       toolName: toolCall?.name,
@@ -244,6 +244,9 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
       references: newReferences,
       text: textSections.join("\n\n"),
       html: htmlSections.join(""),
+      ...(toolResult.sessionId && {
+        headers: {"X-Guimail-Session": toolResult.sessionId},
+      }),
     };
 
     // Construct message

@@ -25,7 +25,7 @@ let activeRequests = 0;
 const MAX_CONCURRENCY = 3;
 
 // Run Claude Code endpoint
-app.post(process.env.CLAUDE_CODE_GATEWAY_PATH, (req, res) => {
+app.post(process.env.CLAUDE_CODE_GATEWAY_PATH, async (req, res) => {
   Sentry.logger.info("[8b] Gateway: started");
 
   // Validate message signature
@@ -49,7 +49,7 @@ app.post(process.env.CLAUDE_CODE_GATEWAY_PATH, (req, res) => {
   }
 
   // Validate prompt
-  const {prompt} = req.body;
+  const {prompt, sessionId, resumePrompt} = req.body;
   if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
     return res.status(400).send("Missing or invalid prompt");
   }
@@ -66,80 +66,109 @@ app.post(process.env.CLAUDE_CODE_GATEWAY_PATH, (req, res) => {
 
   Sentry.logger.info("[8c] Gateway: prompt received", {
     prompt: prompt.slice(0, 500),
+    resuming: !!sessionId,
   });
 
-  // Spawn Claude Code as a child process
-  const child = spawn(
-    "claude",
-    [
-      "-p", prompt,
-      "--output-format", "json",
-    ],
-    {
-      cwd: homedir(),
-    },
-  );
+  // Spawns Claude Code with the given CLI args; resolves with parsed result
+  const spawnClaude = (cliArgs) => new Promise((resolve, reject) => {
+    const child = spawn("claude", cliArgs, {cwd: homedir()});
+    const chunks = []; // stdout buffered as Buffers, joined once on close
+    let stderr = "";
 
-  let stdout = "";
-  let stderr = "";
+    // Kill the child and send 504 if it runs too long
+    const timer = setTimeout(() => {
+      child.kill("SIGTERM"); // non-blocking, close fires later
+      Sentry.captureException(new Error("Claude Code timed out"), {
+        contexts: {prompt: prompt.slice(0, 500)},
+      });
 
-  // Kill the child and send 504 if it runs too long; close event still fires
-  const timer = setTimeout(() => {
-    child.kill("SIGTERM"); // non-blocking, close fires later
-    Sentry.captureException(new Error("Claude Code timed out"), {contexts: {
+      // Guards double reply
+      if (!res.headersSent) res.status(504).send("Claude Code timed out");
+
+      reject(new Error("Claude Code timed out"));
+    }, TIMEOUT_MS);
+
+    // Buffer output chunks as they stream in
+    child.stdout.on("data", (d) => {chunks.push(d);});
+    child.stderr.on("data", (d) => {stderr += d.toString();});
+
+    // Binary can't be spawned (not found, permission denied)
+    child.on("error", (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+
+    child.on("close", (code) => {
+      clearTimeout(timer); // No-op if timeout already fired
+      if (res.headersSent) return reject(new Error("Already replied"));
+
+      // Join all buffered chunks into one string
+      const stdout = Buffer.concat(chunks).toString();
+
+      // Claude Code failed (e.g. bad/expired session ID, binary crash)
+      if (code !== 0) {
+        return reject(Object.assign(
+          new Error("Claude Code exited with non-zero code"),
+          {code, stderr, stdout},
+        ));
+      }
+
+      // Fall back to raw stdout if result isn't valid JSON
+      try {
+        const parsed = JSON.parse(stdout);
+        resolve({result: parsed.result, sessionId: parsed.session_id});
+      } catch {
+        resolve({result: stdout, sessionId: undefined});
+      }
+    });
+  });
+
+  const freshArgs = ["-p", prompt, "--output-format", "json"];
+
+  try {
+    let runResult;
+
+    // Resume an existing session, or start fresh if no sessionId
+    if (sessionId) {
+      const resumeArgs = [
+        "-p", resumePrompt,
+        "--resume", sessionId,
+        "--output-format", "json",
+      ];
+      try {
+        runResult = await spawnClaude(resumeArgs);
+      } catch {
+        // Timeout already replied, don't attempt a fallback
+        if (res.headersSent) return;
+
+        // Session expired or missing, fall back to a fresh session
+        Sentry.logger.warn(
+          "Gateway: resume failed, starting fresh session",
+          {sessionId},
+        );
+        runResult = await spawnClaude(freshArgs);
+      }
+    } else {
+      runResult = await spawnClaude(freshArgs);
+    }
+
+    Sentry.logger.info("[8d] Gateway: Claude Code completed", {
+      resultLength: runResult.result?.length,
+      resumed: !!sessionId,
+    });
+    return res.json(runResult);
+  } catch (error) {
+    Sentry.captureException(error, {contexts: {
       prompt: prompt.slice(0, 500),
     }});
-    if (!res.headersSent) { // Guards double reply
-      res.status(504).send("Claude Code timed out");
+    if (!res.headersSent) {
+      res.status(500).send("Claude Code process failed");
     }
-  }, TIMEOUT_MS);
+  } finally {
 
-  // Buffer output chunks as they stream in
-  child.stdout.on("data", (data) => {
-    stdout += data.toString();
-  });
-  child.stderr.on("data", (data) => {
-    stderr += data.toString();
-  });
-
-  // Fires when the child exits (normally or after SIGTERM)
-  child.on("close", (code) => {
-    clearTimeout(timer); // no-op if timeout already fired
+    // Always release the concurrency slot, on every exit path
     activeRequests--;
-
-    // Timeout already replied, nothing left to do
-    if (res.headersSent) return;
-
-    if (code !== 0) {
-      Sentry.captureException(new Error("Claude Code exited"), {contexts: {
-        exitCode: code,
-        stderr,
-        stdout: stdout.slice(0, 500),
-      }});
-
-      return res.status(500).send("Claude Code process failed");
-    }
-
-    // Return structured fields if JSON, otherwise return raw stdout
-    try {
-      const parsed = JSON.parse(stdout);
-      Sentry.logger.info("[8d] Gateway: Claude Code completed", {
-        resultLength: parsed.result?.length,
-      });
-
-      return res.json({
-        result: parsed.result,
-        sessionId: parsed.session_id,
-      });
-    } catch {
-      // Claude Code didn't return JSON, pass raw output through
-      Sentry.logger.warn("Gateway: Claude Code returned non-JSON output", {
-        stdout: stdout.slice(0, 500),
-      });
-
-      return res.json({result: stdout});
-    }
-  });
+  }
 });
 
 // Start the server

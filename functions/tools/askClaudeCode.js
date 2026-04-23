@@ -36,24 +36,28 @@ export const definition = {
   },
 };
 
-export const handler = async (args) => {
+export const handler = async (args, {sessionId} = {}) => {
   // Validate confidence threshold
   if (args.confidence < 0.5) {
     throw new Error(`Low confidence: ${args.confidence}`);
   }
 
-  // Assemble prompt for Claude Code
-  const prompt = args.forwardedContent ?
+  // Assemble prompt for Claude Code, always everything for fresh sessions
+  const fullPrompt = args.forwardedContent ?
     `${args.typedInstruction}\n\nContext (forwarded email):\n\n` +
       args.forwardedContent :
     args.typedInstruction;
 
+  // On resume, Claude Code already has prior context
+  const resumePrompt = sessionId ? args.typedInstruction : undefined;
+
   // Call Claude Code Gateway
-  Sentry.logger.info("[8a] Tool: Claude Code Gateway called");
-  const {
-    result,
-    // sessionId, // TODO: multi-turn interactions
-  } = await runPrompt(prompt);
+  Sentry.logger.info("[8a] Tool: Claude Code Gateway called", {
+    resuming: !!sessionId,
+  });
+  const {result, sessionId: newSessionId} = await runPrompt(
+    fullPrompt, sessionId, resumePrompt,
+  );
 
   if (!result) {
     throw new Error("Claude Code returned an empty result");
@@ -63,5 +67,6 @@ export const handler = async (args) => {
     type: "claudeCodeResponse",
     text: removeMarkdown(result),
     html: marked(result),
+    sessionId: newSessionId,
   };
 };

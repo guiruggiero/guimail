@@ -68,17 +68,22 @@ export default Sentry.withSentry(
             const subject = message.headers.get("Subject");
             const messageID = message.headers.get("Message-ID");
             const references = message.headers.get("References");
+            const sessionId = message.headers.get("X-Guimail-Session");
             Sentry.logger.info("[3] Worker: message subject", {subject});
 
             // Call Guimail
             let response;
+            const params = {
+                from, subject, messageID, references,
+                ...(sessionId && {sessionId}), // Add only if it exists
+            };
             try {
                 response = await axiosInstance.post("", rawBody, {
                     headers: {
                         "Authorization": `Bearer ${env.WORKER_SECRET}`,
                         "Content-Type": "application/octet-stream",
                     },
-                    params: {from, subject, messageID, references},
+                    params,
                 });
                 Sentry.logger.info("[10] Worker: function call successful");
 
