@@ -1,5 +1,6 @@
 node_modules/
 .wrangler/
+firebase-debug.log
 service-account-key.json
 prompt.md
 .env
