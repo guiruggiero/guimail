@@ -6,7 +6,7 @@
     "type": "module",
     "main": "index.js",
     "dependencies": {
-        "@sentry/node": "^10.48.0",
+        "@sentry/node": "^10.50.0",
         "express": "^5.2.1",
         "helmet": "^8.1.0"
     },
