@@ -21,7 +21,7 @@ Guimail processes emails forwarded by a user. Two components work in sequence:
 ## Code Style
 
 - `functions/` — max line length 80 characters (ESLint Google style config)
-- `gateway/` and `worker/` — 4-space indent (`@stylistic/eslint-plugin`)
+- `gateway/` and `worker/` — 4-space indent (`@stylistic/eslint-plugin`); shared ESLint rules live in `eslint.config.shared.js` at the repo root
 
 ## Other
 

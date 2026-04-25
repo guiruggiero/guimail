@@ -48,7 +48,7 @@ Each in `functions/utils/`.
 
 ## Prompt management
 
-`functions/prompt.md` is the local copy of the system prompt (gitignored). The live prompt is on Langfuse; `prompt.md` exists so Claude Code always has the full prompt in context. Use `npm run prompt-pull` / `npm run prompt-push` to sync. Always apply changes to the system prompt and let the user know, but never mention it in the commit message.
+`functions/prompt.md` is the local copy of the system prompt (gitignored). The live prompt is on Langfuse; `prompt.md` exists so Claude Code always has the full prompt in context. Use `npm run prompt-pull` / `npm run prompt-push` to sync. Always apply changes to the system prompt, let the user know, and offer to push to Langfuse; but never mention it in the commit message.
 
 ## Local scripts
 
