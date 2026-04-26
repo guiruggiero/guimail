@@ -203,68 +203,66 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
     return;
   }
 
-  // Create message back
+  // Create message back, set fields for threading
+  const subjectStr = originalSubject ?? "";
+  const subject = subjectStr.trim().toLowerCase().startsWith("re:") ?
+    subjectStr : `Re: ${subjectStr}`; // Add "Re:" prefix
+  const newReferences = [references, messageID].filter(Boolean).join(" ");
+
+  // Build plain text and HTML sections in standard order:
+  // main text → optional link → optional confidence → sign-off
+  const textSections = [toolResult.text];
+  const htmlSections = toolResult.html ?
+    [toolResult.html] :
+    toolResult.text.split("\n\n").map((s) => `<p>${s}</p>`);
+
+  // Append optional link
+  if (toolResult.link) {
+    textSections.push(toolResult.link.url);
+    htmlSections.push(
+      `<p><a href="${toolResult.link.url}">${toolResult.link.label}</a></p>`,
+    );
+  }
+
+  // Append confidence score when provided
+  if (toolResult.confidence !== undefined) {
+    const confidenceLine = `Confidence = ${toolResult.confidence}%`;
+    textSections.push(confidenceLine);
+    htmlSections.push(`<p>${confidenceLine}</p>`);
+  }
+
+  textSections.push("Thank you for using Guimail!");
+  htmlSections.push("<p>Thank you for using Guimail!</p>");
+
+  // Base message configuration
+  const replyConfig = {
+    from: `"Guimail" <${process.env.EMAIL_GUIMAIL}>`,
+    to: from,
+    subject,
+    inReplyTo: messageID,
+    references: newReferences,
+    text: textSections.join("\n\n"),
+    html: htmlSections.join(""),
+    ...(toolResult.sessionId && {
+      headers: {"X-Guimail-Session": toolResult.sessionId},
+    }),
+  };
+
+  // Construct and send reply
   let rawReply;
   try {
-    // Set fields for threading
-    const subjectStr = originalSubject ?? "";
-    const subject = subjectStr.trim().toLowerCase().startsWith("re:") ?
-      subjectStr : `Re: ${subjectStr}`; // Add "Re:" prefix
-    const newReferences = [references, messageID].filter(Boolean).join(" ");
-
-    // Build plain text and HTML sections in standard order:
-    // main text → optional link → optional confidence → sign-off
-    const textSections = [toolResult.text];
-    const htmlSections = toolResult.html ?
-      [toolResult.html] :
-      toolResult.text.split("\n\n").map((s) => `<p>${s}</p>`);
-
-    if (toolResult.link) {
-      textSections.push(toolResult.link.url);
-      htmlSections.push(
-        `<p><a href="${toolResult.link.url}">${toolResult.link.label}</a></p>`,
-      );
-    }
-
-    if (toolResult.confidence !== undefined) {
-      const confidenceLine = `Confidence = ${toolResult.confidence}%`;
-      textSections.push(confidenceLine);
-      htmlSections.push(`<p>${confidenceLine}</p>`);
-    }
-
-    textSections.push("Thank you for using Guimail!");
-    htmlSections.push("<p>Thank you for using Guimail!</p>");
-
-    // Base message configuration
-    const replyConfig = {
-      from: `"Guimail" <${process.env.EMAIL_GUIMAIL}>`,
-      to: from,
-      subject,
-      inReplyTo: messageID,
-      references: newReferences,
-      text: textSections.join("\n\n"),
-      html: htmlSections.join(""),
-      ...(toolResult.sessionId && {
-        headers: {"X-Guimail-Session": toolResult.sessionId},
-      }),
-    };
-
-    // Construct message
-    const reply = new MailComposer(replyConfig);
     rawReply = await new Promise((resolve, reject) => {
-      reply.compile().build((error, message) => {
+      new MailComposer(replyConfig).compile().build((error, message) => {
         if (error) return reject(error);
         return resolve(message.toString());
       });
     });
 
-    // Reply to message
     response.status(200).send(rawReply);
 
     Sentry.logger.info("[9] Function: done", {toolType: toolResult.type});
 
     await Sentry.flush(2000);
-    return;
   } catch (error) {
     Sentry.captureException(error, {contexts: {
       toolResultType: toolResult.type,
@@ -273,6 +271,5 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
     response.status(500).send("Reply creation error");
 
     await Sentry.flush(2000);
-    return;
   }
 });

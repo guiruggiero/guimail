@@ -29,20 +29,12 @@ app.post(process.env.CLAUDE_CODE_GATEWAY_PATH, async (req, res) => {
     Sentry.logger.info("[8b] Gateway: started");
 
     // Validate message signature
-    try {
-    // Get signature from header
-        const authHeader = req.headers.authorization;
-        if (!authHeader) throw new Error("No signature");
-        const signature = authHeader.split(" ")[1];
-
-        // Validate signature
-        if (signature !== process.env.CLAUDE_CODE_GATEWAY_SECRET) {
-            throw new Error("Invalid signature");
-        }
-    } catch (error) {
+    const authHeader = req.headers.authorization;
+    const signature = authHeader?.split(" ")[1];
+    if (!authHeader || signature !== process.env.CLAUDE_CODE_GATEWAY_SECRET) {
         Sentry.logger.warn("Gateway: unauthorized request", {
-            authHeaderPresent: !!req.headers.authorization,
-            reason: error.message,
+            authHeaderPresent: !!authHeader,
+            reason: authHeader ? "Invalid signature" : "No signature",
         });
 
         return res.status(401).send("Unauthorized");
