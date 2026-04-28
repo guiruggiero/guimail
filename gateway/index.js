@@ -48,7 +48,7 @@ app.post(process.env.CLAUDE_CODE_GATEWAY_PATH, async (req, res) => {
 
     // Reject if already at capacity
     if (activeRequests >= MAX_CONCURRENCY) {
-        Sentry.logger.warn("Gateway: request rejected, at capacity", {
+        Sentry.logger.error("Gateway: request rejected, at capacity", {
             activeRequests,
         });
 

@@ -56,7 +56,7 @@ export default Sentry.withSentry(
             // Check for email size
             const rawSize = message.rawSize;
             if (rawSize > MAX_EMAIL_SIZE) {
-                Sentry.logger.warn("Worker: email too large", {rawSize});
+                Sentry.logger.error("Worker: email too large", {rawSize});
                 ctx.waitUntil(Sentry.flush(2000));
 
                 message.setReject("This was too large for Guimail. Delete something (an attachment?) and try again, please.");
@@ -89,7 +89,7 @@ export default Sentry.withSentry(
 
             } catch (error) {
                 // Guimail responded with status 4xx or 5xx
-                if (error.response) Sentry.logger.warn("Worker: Guimail failed", {
+                if (error.response) Sentry.logger.error("Worker: Guimail failed", {
                     status: error.response.status,
                     data: error.response?.data,
                 });
