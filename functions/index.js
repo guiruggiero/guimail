@@ -117,6 +117,7 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
 
     Sentry.logger.info("[5] Function: message body", {
       messageBodyLength: messageBody.length,
+      sessionId: sessionId ?? null, // TODO: remove once multi-turn is stable
     });
   } catch (error) {
     Sentry.captureException(error, {contexts: {
