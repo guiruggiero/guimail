@@ -21,7 +21,7 @@ export const definition = {
 
 export const handler = async (args) => {
   Sentry.logger.info("[8] Tool: email summarized");
-  
+
   return {
     type: "summary",
     text: `Email summary:\n\n${args.summary}`,

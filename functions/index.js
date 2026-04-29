@@ -134,7 +134,7 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
   // Short-circuit to Claude Code for multi-turn sessions
   if (sessionId) {
     Sentry.logger.info("[6-7] Function: skipping Gemini, session continuation");
-    
+
     // Strip quoted reply history
     const gmailReply = /^On .+ wrote:$/im; // Gmail reply
     const gmailForward = /^-+\s*forwarded message\s*-+/im; // Gmail forward
