@@ -6,9 +6,10 @@ Firebase Cloud Function (`functions/index.js`). Single exported function `guimai
 
 1. Authenticates the request via `Authorization: Bearer <WORKER_SECRET>` header
 2. Parses the raw email body with **PostalMime** (prefers text over HTML)
-3. Fetches the system prompt from **Langfuse** (prompt named `"Guimail"`)
-4. Calls **Gemini** (`gemini-flash-latest`, `thinkingLevel: "high"`) with forced tool use (`FunctionCallingConfigMode.ANY`)
-5. Executes the chosen tool handler, then sends back the raw RFC 2822 reply message
+3. If `sessionId` is present, short-circuits to `askClaudeCode` directly (strips Gmail reply/forward separators from the body first, skips steps 4–5)
+4. Fetches the system prompt from **Langfuse** (prompt named `"Guimail"`)
+5. Calls **Gemini** (`gemini-flash-latest`, `thinkingLevel: "high"`) with forced tool use (`FunctionCallingConfigMode.ANY`)
+6. Executes the chosen tool handler, then sends back the raw RFC 2822 reply message
 
 **Function timeout**: 420s (7 minutes) to accommodate `askClaudeCode`, which uses a 185s per-attempt axios timeout with 1 retry.
 

@@ -69,10 +69,7 @@ export default Sentry.withSentry(
             const messageID = message.headers.get("Message-ID");
             const references = message.headers.get("References");
             const sessionId = message.headers.get("X-Guimail-Session");
-            Sentry.logger.info("[3] Worker: message subject", {
-                subject,
-                sessionId: sessionId ?? null // TODO: remove once multi-turn is stable
-            });
+            Sentry.logger.info("[3] Worker: message subject", {subject});
 
             // Call Guimail
             let response;

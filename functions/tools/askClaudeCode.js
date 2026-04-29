@@ -54,15 +54,15 @@ export const handler = async (args, {sessionId} = {}) => {
   // Call Claude Code Gateway
   Sentry.logger.info("[8a] Tool: Claude Code Gateway called", {
     resuming: !!sessionId,
-    sessionId: sessionId ?? null,
+    sessionId,
   });
 
   const {result, sessionId: newSessionId} = await runPrompt(
     fullPrompt, sessionId, resumePrompt,
   );
-  
+
   Sentry.logger.info("[8b] Tool: Claude Code Gateway done", {
-    sessionId: newSessionId ?? null,
+    sessionId: newSessionId,
   });
 
   if (!result) {

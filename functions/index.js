@@ -117,7 +117,6 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
 
     Sentry.logger.info("[5] Function: message body", {
       messageBodyLength: messageBody.length,
-      sessionId: sessionId ?? null, // TODO: remove once multi-turn is stable
     });
   } catch (error) {
     Sentry.captureException(error, {contexts: {
@@ -130,60 +129,79 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
     return;
   }
 
-  // Get model prompt
-  let instructions;
-  try {
-    const promptResponse = await getPrompt("Guimail");
-    instructions = promptResponse.prompt;
-
-    Sentry.logger.info("[6] Function: prompt fetched", {
-      version: promptResponse.version,
-    });
-  } catch (error) {
-    Sentry.captureException(error);
-
-    response.status(502).send("Prompt fetching error");
-
-    await Sentry.flush(2000);
-    return;
-  }
-
-  // Call Gemini
-  let result;
   let toolCall;
   let handler;
-  try {
-    result = await ai.models.generateContent({
-      ...modelConfig,
-      config: {
-        ...modelConfig.config,
-        systemInstruction: instructions,
-      },
-      contents: messageBody,
-    });
+  // Short-circuit to Claude Code for multi-turn sessions
+  if (sessionId) {
+    Sentry.logger.info("[6-7] Function: skipping Gemini, session continuation");
+    
+    // Strip quoted reply history
+    const gmailReply = /^On .+ wrote:$/im; // Gmail reply
+    const gmailForward = /^-+\s*forwarded message\s*-+/im; // Gmail forward
+    const separatorIndex = messageBody.search(
+      new RegExp(`${gmailReply.source}|${gmailForward.source}`, "im"),
+    );
+    const typedInstruction = separatorIndex > 0 ?
+      messageBody.slice(0, separatorIndex).trim() : messageBody.trim();
+    toolCall = {
+      name: askClaudeCodeDef.name,
+      args: {typedInstruction, confidence: 1},
+    };
+    handler = askClaudeCodeHandler;
+  } else {
+    // Get model prompt
+    let instructions;
+    try {
+      const promptResponse = await getPrompt("Guimail");
+      instructions = promptResponse.prompt;
 
-    // Validate tool call
-    if (!result?.functionCalls || result.functionCalls.length === 0) {
-      throw new Error("No tool call returned");
+      Sentry.logger.info("[6] Function: prompt fetched", {
+        version: promptResponse.version,
+      });
+    } catch (error) {
+      Sentry.captureException(error);
+
+      response.status(502).send("Prompt fetching error");
+
+      await Sentry.flush(2000);
+      return;
     }
-    toolCall = result.functionCalls[0];
-    handler = toolHandlers[toolCall.name];
-    if (!handler) {
-      throw new Error(`Unknown tool returned: ${toolCall.name}`);
+
+    // Call Gemini
+    let result;
+    try {
+      result = await ai.models.generateContent({
+        ...modelConfig,
+        config: {
+          ...modelConfig.config,
+          systemInstruction: instructions,
+        },
+        contents: messageBody,
+      });
+
+      // Validate tool call
+      if (!result?.functionCalls || result.functionCalls.length === 0) {
+        throw new Error("No tool call returned");
+      }
+      toolCall = result.functionCalls[0];
+      handler = toolHandlers[toolCall.name];
+      if (!handler) {
+        throw new Error(`Unknown tool returned: ${toolCall.name}`);
+      }
+
+      Sentry.logger.info("[7] Function: Gemini called",
+        {toolName: toolCall.name});
+    } catch (error) {
+      Sentry.captureException(error, {contexts: {
+        geminiResult: result,
+        messageBody: messageBody.slice(0, 500),
+      }});
+
+      response.status(502).send("Gemini call error");
+
+      await Sentry.flush(2000);
+      return;
     }
-
-    Sentry.logger.info("[7] Function: Gemini called",
-      {toolName: toolCall.name});
-  } catch (error) {
-    Sentry.captureException(error, {contexts: {
-      geminiResult: result,
-      messageBody: messageBody.slice(0, 500),
-    }});
-
-    response.status(502).send("Gemini call error");
-
-    await Sentry.flush(2000);
-    return;
   }
 
   // Execute appropriate tool handler
