@@ -4,6 +4,12 @@ import {Type} from "@google/genai";
 import {getSheetsClient} from "../utils/googleSheets.js";
 import {createExpenseWithGeorgia} from "../utils/splitwise.js";
 
+const BUDGET_LINK = {
+  url: "https://docs.google.com/spreadsheets/d/" +
+    "1GMidO01MErc7MY2tuXa7y-CGINtFhIssQejdG5J5SyY",
+  label: "View budget spreadsheet",
+};
+
 // Mapping of issuers and row numbers
 const issuerToRow = {
   "Chase": "2",
@@ -103,6 +109,7 @@ export const handler = async (args) => {
   return {
     type: "budgetUpdate",
     text: responseText,
+    link: BUDGET_LINK,
     confidence: Math.round(args.confidence * 100),
   };
 };
