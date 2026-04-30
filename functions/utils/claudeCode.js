@@ -1,7 +1,7 @@
 // Imports
 import {createRetryClient, defaultRetryCondition} from "./axiosClient.js";
 
-// 504 means Claude Code timed out — retrying won't help and burns Firebase budget
+// 504 means Claude Code timed out and retrying won't help
 const gatewayRetryCondition = (error) =>
   error.response?.status !== 504 && defaultRetryCondition(error);
 

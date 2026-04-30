@@ -17,8 +17,8 @@ const axiosInstance = axios.create({
 
 // Retry configuration
 axiosRetry(axiosInstance, {
-    retries: 1, // One retry for transient Firebase failures (Gemini/Langfuse down)
-    retryDelay: axiosRetry.exponentialDelay, // 1s then 2s between retries
+    retries: 1, // One retry for transient failures
+    retryDelay: axiosRetry.exponentialDelay, // 1s between retries
     // Only retry on network or 5xx errors
     retryCondition: (error) => axiosRetry.isNetworkOrIdempotentRequestError(error) || (error.response && error.response.status > 500),
 });

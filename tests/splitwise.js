@@ -1,6 +1,6 @@
 // console.log(process.env.SPLITWISE_API_KEY);
 
-// Imports
+// Import
 import {writeFileSync} from "node:fs";
 
 // Base URL
