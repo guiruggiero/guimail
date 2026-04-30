@@ -12,7 +12,7 @@ Firebase Cloud Function (`functions/index.js`). Single exported function `guimai
 6. Calls **Gemini** (`gemini-flash-latest`, `thinkingLevel: "high"`) with forced tool use (`FunctionCallingConfigMode.ANY`)
 7. Executes the chosen tool handler, then sends back the raw RFC 2822 reply message
 
-**Function timeout**: 420s (7 minutes) to accommodate `askClaudeCode`, which uses a 185s per-attempt axios timeout with 1 retry.
+**Function timeout**: 420s (7 minutes) to accommodate `askClaudeCode`, which uses a 185s per-attempt axios timeout with 1 retry (excluding 504).
 
 ## Tool handlers
 
@@ -32,8 +32,8 @@ Each in `functions/tools/`, assembled into `toolHandlers` in `index.js`.
 
 Each in `functions/utils/`.
 
-- `axiosClient.js` — `createRetryClient(config, retries = 2)`: shared axios+retry factory (exponential backoff, network/5xx)
-- `claudeCode.js` — axios client for the Claude Code Gateway (185s timeout, 1 retry), `runPrompt(prompt, sessionId?, resumePrompt?)`
+- `axiosClient.js` — `createRetryClient(config, retries = 2, retryCondition?)`: shared axios+retry factory (exponential backoff, network/5xx by default)
+- `claudeCode.js` — axios client for the Claude Code Gateway (185s timeout, 1 retry excluding 504), `runPrompt(prompt, sessionId?, resumePrompt?)`
 - `googleAuth.js` — `KEY_FILE`, `GOOGLE_RETRY_CONFIG`, `getGoogleAuth(scopes)`: shared Google service account auth
 - `splitwise.js` — `getFriendRegistry`, `createSoloExpense`, `createSharedExpense`, `createExpenseWithGeorgia`; `checkSplitwiseError` and `splitEqual` are internal helpers
 - `flightAware.js` — axios client, `getFlightAwareUrl`

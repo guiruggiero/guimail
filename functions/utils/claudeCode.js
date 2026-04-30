@@ -1,5 +1,9 @@
-// Import
-import {createRetryClient} from "./axiosClient.js";
+// Imports
+import {createRetryClient, defaultRetryCondition} from "./axiosClient.js";
+
+// 504 means Claude Code timed out — retrying won't help and burns Firebase budget
+const gatewayRetryCondition = (error) =>
+  error.response?.status !== 504 && defaultRetryCondition(error);
 
 // Axios instance for Claude Code Gateway
 const gatewayClient = createRetryClient({
@@ -9,7 +13,7 @@ const gatewayClient = createRetryClient({
     "Authorization": `Bearer ${process.env.CLAUDE_CODE_GATEWAY_SECRET}`,
     "Content-Type": "application/json",
   },
-}, 1);
+}, 1, gatewayRetryCondition);
 
 // Sends a prompt to Claude Code and returns the result text
 export const runPrompt = async (prompt, sessionId, resumePrompt) => {
