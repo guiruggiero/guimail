@@ -68,15 +68,11 @@ export default Sentry.withSentry(
             const subject = message.headers.get("Subject");
             const messageID = message.headers.get("Message-ID");
             const references = message.headers.get("References");
-            const sessionId = message.headers.get("X-Guimail-Session");
             Sentry.logger.info("[3] Worker: message subject", {subject});
 
             // Call Guimail
             let response;
-            const params = {
-                from, subject, messageID, references,
-                ...(sessionId && {sessionId}), // Add only if it exists
-            };
+            const params = {from, subject, messageID, references};
             try {
                 response = await axiosInstance.post("", rawBody, {
                     headers: {

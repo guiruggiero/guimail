@@ -98,9 +98,7 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
   }
 
   // Extract information from request
-  const {
-    from, subject: originalSubject, messageID, references, sessionId,
-  } = request.query;
+  const {from, subject: originalSubject, messageID, references} = request.query;
   const raw = request.rawBody;
 
   // Extract body from message
@@ -128,6 +126,9 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
     await Sentry.flush(2000);
     return;
   }
+
+  // Extract session ID embedded in the reply body
+  const sessionId = messageBody.match(/\[guimail-session:([^\]]+)\]/)?.[1];
 
   let toolCall;
   let handler;
@@ -253,6 +254,13 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
   textSections.push("Thank you for using Guimail!");
   htmlSections.push("<p>Thank you for using Guimail!</p>");
 
+  // Embed session ID in hidden span in HTML
+  if (toolResult.sessionId) {
+    const marker = `[guimail-session:${toolResult.sessionId}]`;
+    textSections.push(marker);
+    htmlSections.push(`<span style="display:none">${marker}</span>`);
+  }
+
   // Base message configuration
   const replyConfig = {
     from: `"Guimail" <${process.env.EMAIL_GUIMAIL}>`,
@@ -262,9 +270,6 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
     references: newReferences,
     text: textSections.join("\n\n"),
     html: htmlSections.join(""),
-    ...(toolResult.sessionId && {
-      headers: {"X-Guimail-Session": toolResult.sessionId},
-    }),
   };
 
   // Construct and send reply

@@ -10,7 +10,7 @@ Guimail processes emails forwarded by a user. Two components work in sequence:
 2. **Firebase Cloud Function** (`functions/`) — parses the email; if a `sessionId` is present, short-circuits directly to `askClaudeCode` (skipping Langfuse and Gemini); otherwise fetches the system prompt from Langfuse, calls Gemini with forced tool use, executes the chosen tool handler, and returns a raw RFC 2822 reply.
 3. **Claude Code Gateway** (`gateway/`) — Express server that spawns `claude -p` as a child process, used by the `askClaudeCode` tool handler. See `gateway/CLAUDE.md`.
 
-**Session continuity**: the worker extracts `X-Guimail-Session` from incoming emails and passes it as `sessionId` to the function; the function propagates it back in the reply header, enabling multi-turn Claude Code sessions.
+**Session continuity**: the function embeds a `[guimail-session:<id>]` marker in the reply body (Gmail strips custom headers on reply, so headers can't be used); on the next turn the function extracts it from the quoted body to short-circuit directly to `askClaudeCode`.
 
 **Reply threading**: replies set `In-Reply-To` and `References` headers using the original `messageID` and `references` query params.
 

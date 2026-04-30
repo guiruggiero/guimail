@@ -6,10 +6,11 @@ Firebase Cloud Function (`functions/index.js`). Single exported function `guimai
 
 1. Authenticates the request via `Authorization: Bearer <WORKER_SECRET>` header
 2. Parses the raw email body with **PostalMime** (prefers text over HTML)
-3. If `sessionId` is present, short-circuits to `askClaudeCode` directly (strips Gmail reply/forward separators from the body first, skips steps 4–5)
-4. Fetches the system prompt from **Langfuse** (prompt named `"Guimail"`)
-5. Calls **Gemini** (`gemini-flash-latest`, `thinkingLevel: "high"`) with forced tool use (`FunctionCallingConfigMode.ANY`)
-6. Executes the chosen tool handler, then sends back the raw RFC 2822 reply message
+3. Extracts `sessionId` from a `[guimail-session:<id>]` marker embedded in the body (Gmail strips custom headers on reply, so the marker travels in the body instead)
+4. If `sessionId` is present, short-circuits to `askClaudeCode` directly (strips Gmail reply/forward separators from the body first, skips steps 5–6)
+5. Fetches the system prompt from **Langfuse** (prompt named `"Guimail"`)
+6. Calls **Gemini** (`gemini-flash-latest`, `thinkingLevel: "high"`) with forced tool use (`FunctionCallingConfigMode.ANY`)
+7. Executes the chosen tool handler, then sends back the raw RFC 2822 reply message
 
 **Function timeout**: 420s (7 minutes) to accommodate `askClaudeCode`, which uses a 185s per-attempt axios timeout with 1 retry.
 
@@ -23,7 +24,7 @@ Each in `functions/tools/`, assembled into `toolHandlers` in `index.js`.
 - `addToSplitwise` — creates a Splitwise expense via `createSoloExpense` or `createSharedExpense`; accepts optional `splitWith` (array of friend names) and `paidBy` (name of payer, defaults to Gui via `SPLITWISE_ID_GUI`); resolves names via `getFriendRegistry()`; falls back to a solo expense with a note if any name can't be resolved; returns `toolResult.link` as `{url, label}` for a "View in Splitwise" link
 - `askClaudeCode` — forwards a coding task to the Claude Code Gateway (`claudeCode.js`); Gemini extracts `typedInstruction` (verbatim, up to the forwarded message separator) and optional `forwardedContent` (HTML-stripped forwarded body); on a fresh session assembles both into a full prompt, on a resume only sends `typedInstruction`; throws on empty result; returns `text` (markdown stripped via `remove-markdown`), `html` (rendered via `marked`), and `sessionId`
 
-**Tool return shape**: `{ type, text, html?, link?, confidence?, sessionId? }`. All data-extraction tools include `confidence`; handlers reject calls below 0.5. `index.js` assembles replies in order: main text → link → confidence → sign-off; uses `toolResult.html` directly for the HTML part when provided.
+**Tool return shape**: `{ type, text, html?, link?, confidence?, sessionId? }`. All data-extraction tools include `confidence`; handlers reject calls below 0.5. `index.js` assembles replies in order: main text → link → confidence → sign-off → session marker; uses `toolResult.html` directly for the HTML part when provided. When `toolResult.sessionId` is present, appends `[guimail-session:<id>]` as plain text and a hidden `<span>` in HTML.
 
 **Adding a new tool**: create `functions/tools/<name>.js` with `definition` and `handler` exports, then add both to `functionDeclarations` and `toolHandlers` in `index.js`.
 

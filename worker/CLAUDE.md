@@ -6,8 +6,8 @@ Cloudflare Email Worker (`worker/src/index.js`). Receives emails via Cloudflare 
 
 1. Validates sender against allowlist (built lazily from env vars, not available at module scope; rejects with `setReject`)
 2. Enforces 5MB size limit (rejects oversized emails)
-3. Extracts `subject`, `messageID`, `references`, and `X-Guimail-Session` headers from the raw message
-4. POSTs the raw email body (octet stream) to the Firebase Cloud Function with `WORKER_SECRET` auth and metadata as query params (includes `sessionId` from `X-Guimail-Session` if present)
+3. Extracts `subject`, `messageID`, and `references` headers from the raw message
+4. POSTs the raw email body (octet stream) to the Firebase Cloud Function with `WORKER_SECRET` auth and metadata as query params
 5. Sends the raw RFC 2822 reply from the function back to the sender via `message.reply()`
 
 ## Required env vars
