@@ -32,8 +32,8 @@
     "lint": "eslint .",
     "lint-fix": "eslint . --fix",
     "deploy": "npx firebase deploy --only functions:guimail",
-    "prompt-pull": "node --env-file=.env scripts/prompt.js pull",
-    "prompt-push": "node --env-file=.env scripts/prompt.js push",
+    "prompt-pull": "node --env-file=.env scripts/promptSync.js pull",
+    "prompt-push": "node --env-file=.env scripts/promptSync.js push",
     "friends": "node scripts/friends.js"
   }
 }

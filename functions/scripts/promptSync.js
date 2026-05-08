@@ -50,4 +50,4 @@ const push = async () => {
 const command = process.argv[2];
 if (command === "pull") await pull();
 else if (command === "push") await push();
-else console.error("Usage: node scripts/prompt.js pull|push");
+else console.error("Usage: node scripts/promptSync.js pull|push");

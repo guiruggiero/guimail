@@ -54,4 +54,4 @@ Each in `functions/utils/`.
 
 ## Local scripts
 
-`functions/scripts/` — not deployed with the function. `prompt.js` (Langfuse pull/push), `friends.json` (friends registry source of truth), `friends.js` (syncs to `.env`).
+`functions/scripts/` — not deployed with the function. `promptSync.js` (Langfuse pull/push), `friends.json` (friends registry source of truth), `friends.js` (syncs to `.env`).
