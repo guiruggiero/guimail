@@ -1,9 +1,11 @@
+<p align="center">
+  <img src="logo.png" alt="Guimail" width="300">
+</p>
+
 [![CodeQL](https://github.com/guiruggiero/guimail/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/guiruggiero/guimail/actions/workflows/github-code-scanning/codeql)
 [![Bugs](https://sonarcloud.io/api/project_badges/measure?project=guiruggiero_guimail&metric=bugs)](https://sonarcloud.io/summary/new_code?id=guiruggiero_guimail)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=guiruggiero_guimail&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=guiruggiero_guimail)
 [![Dependencies](https://github.com/guiruggiero/guimail/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/guiruggiero/guimail/actions/workflows/dependabot/dependabot-updates)
-
-# 📧 Guimail
 
 An intelligent multi-purpose email processing AI agent. Forward any email to Guimail and it will automatically:
 
