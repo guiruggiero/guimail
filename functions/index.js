@@ -101,6 +101,13 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
   const {from, subject: originalSubject, messageID, references} = request.query;
   const raw = request.rawBody;
 
+  // Warn if threading metadata is missing
+  if (!messageID) {
+    Sentry.logger.warn("[4a] Function: missing messageID", {
+      originalSubject, references,
+    });
+  }
+
   // Extract body from message
   let body;
   let messageBody;

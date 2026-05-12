@@ -61,7 +61,7 @@ export const handler = async (args, {sessionId} = {}) => {
     fullPrompt, sessionId, resumePrompt,
   );
 
-  Sentry.logger.info("[8b] Tool: Claude Code Gateway done", {
+  Sentry.logger.info("[8d] Tool: Claude Code Gateway done", {
     sessionId: newSessionId,
   });
 

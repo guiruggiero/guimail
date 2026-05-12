@@ -68,7 +68,7 @@ export default Sentry.withSentry(
             const subject = message.headers.get("Subject");
             const messageID = message.headers.get("Message-ID");
             const references = message.headers.get("References");
-            Sentry.logger.info("[3] Worker: message subject", {subject});
+            Sentry.logger.info("[3] Worker: message metadata", {subject, messageID, references});
 
             // Call Guimail
             let response;

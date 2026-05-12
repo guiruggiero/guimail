@@ -148,10 +148,6 @@ app.post(process.env.CLAUDE_CODE_GATEWAY_PATH, async (req, res) => {
             runResult = await spawnClaude(freshArgs);
         }
 
-        Sentry.logger.info("[8d] Gateway: Claude Code completed", {
-            resultLength: runResult.result?.length,
-            resumed: !!sessionId,
-        });
         return res.json(runResult);
     } catch (error) {
         Sentry.captureException(error, {contexts: {
