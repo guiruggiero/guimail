@@ -12,7 +12,13 @@ updates:
       time: "00:00"
       timezone: America/Los_Angeles
     groups:
-      all:
+      version:
+        update-types:
+          - patch
+          - minor
+          - major
+      security:
+        applies-to: security-updates
         update-types:
           - patch
           - minor
