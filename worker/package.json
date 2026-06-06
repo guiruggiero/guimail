@@ -6,8 +6,8 @@
 	"type": "module",
 	"main": "src/index.js",
 	"dependencies": {
-		"@sentry/cloudflare": "^10.55.0",
-		"axios": "^1.16.1",
+		"@sentry/cloudflare": "^10.56.0",
+		"axios": "^1.17.0",
 		"axios-retry": "^4.5.0"
 	},
 	"devDependencies": {
@@ -15,7 +15,7 @@
 		"@stylistic/eslint-plugin": "^5.9.0",
 		"eslint": "^10.4.1",
 		"globals": "^17.6.0",
-		"wrangler": "^4.95.0"
+		"wrangler": "^4.98.0"
 	},
 	"scripts": {
 		"lint": "eslint .",
