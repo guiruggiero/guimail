@@ -9,7 +9,7 @@ export const apps = [
         cwd: dir,
         script: "npm",
         args: "start",
-        max_memory_restart: "100M",
+        max_memory_restart: "300M",
         log_file: resolve(dir, "gateway.log"),
         time: true,
         wait_ready: true,
