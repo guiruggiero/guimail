@@ -8,15 +8,15 @@
   "private": true,
   "main": "index.js",
   "dependencies": {
-    "@google/genai": "^2.8.0",
-    "@langfuse/client": "^5.4.1",
-    "@sentry/node": "^10.57.0",
-    "axios": "^1.17.0",
+    "@google/genai": "^2.9.0",
+    "@langfuse/client": "^5.5.3",
+    "@sentry/node": "^10.59.0",
+    "axios": "^1.18.0",
     "axios-retry": "^4.5.0",
     "firebase-functions": "^7.1.1",
     "googleapis": "^173.0.0",
     "marked": "^18.0.5",
-    "nodemailer": "^8.0.11",
+    "nodemailer": "^9.0.1",
     "postal-mime": "^2.7.1",
     "remove-markdown": "^0.6.3"
   },
@@ -25,7 +25,7 @@
     "@eslint/js": "^10.0.1",
     "eslint": "^10.5.0",
     "eslint-config-google": "^0.14.0",
-    "firebase-tools": "^15.20.0",
+    "firebase-tools": "^15.22.0",
     "globals": "^17.6.0"
   },
   "scripts": {
