@@ -6,8 +6,8 @@
 	"type": "module",
 	"main": "src/index.js",
 	"dependencies": {
-		"@sentry/cloudflare": "^10.57.0",
-		"axios": "^1.17.0",
+		"@sentry/cloudflare": "^10.59.0",
+		"axios": "^1.18.0",
 		"axios-retry": "^4.5.0"
 	},
 	"devDependencies": {
