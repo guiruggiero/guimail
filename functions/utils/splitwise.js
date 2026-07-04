@@ -19,9 +19,15 @@ const checkSplitwiseError = (expenseData) => {
   }
 };
 
+// Normalizes a bare date (no time) to noon UTC, avoiding day-shift issues
+const normalizeDate = (date) => {
+  if (!date) return undefined;
+  return date.includes("T") ? date : `${date}T12:00:00Z`;
+};
+
 // Creator for solo expenses (single-user)
 export const createSoloExpense = async (
-  description, amount, currency, details = "") => {
+  description, amount, currency, details = "", date) => {
   const fullDetails = [details, "Created with Guimail"]
     .filter(Boolean).join("\n\n");
 
@@ -30,6 +36,7 @@ export const createSoloExpense = async (
     description,
     details: fullDetails,
     currency_code: currency,
+    date: normalizeDate(date),
     group_id: 0,
     split_equally: true,
   });
@@ -37,14 +44,41 @@ export const createSoloExpense = async (
   return res;
 };
 
-// Friend registry from SPLITWISE_FRIENDS env var, array of {id, name, nickname}
-let friendRegistry = null;
-export const getFriendRegistry = () => {
-  if (friendRegistry) return friendRegistry;
+// Creator for expenses from arbitrary per-person paid/owed shares
+export const createExpenseFromShares = async (
+  description, amount, currency, shares, details = "", date) => {
+  const fullDetails = [details, "Created with Guimail"]
+    .filter(Boolean).join("\n\n");
 
-  friendRegistry = new Map();
+  const payload = {
+    cost: amount.toFixed(2),
+    description,
+    details: fullDetails,
+    currency_code: currency,
+    date: normalizeDate(date),
+    group_id: 0,
+  };
+
+  shares.forEach(({userId, paid, owed}, i) => {
+    payload[`users__${i}__user_id`] = userId;
+    payload[`users__${i}__paid_share`] = paid;
+    payload[`users__${i}__owed_share`] = owed;
+  });
+
+  const res = await splitwiseClient.post("/create_expense", payload);
+  checkSplitwiseError(res.data);
+  return res;
+};
+
+// Static friend registry from SPLITWISE_FRIENDS env var (nicknames/aliases)
+// array of {id, name, nickname}
+let staticFriendRegistry = null;
+const getStaticFriendRegistry = () => {
+  if (staticFriendRegistry) return staticFriendRegistry;
+
+  staticFriendRegistry = new Map();
   const raw = process.env.SPLITWISE_FRIENDS;
-  if (!raw) return friendRegistry;
+  if (!raw) return staticFriendRegistry;
 
   let friends;
   try {
@@ -57,17 +91,77 @@ export const getFriendRegistry = () => {
     const sid = String(id);
 
     const [firstName] = name.split(" ");
-    friendRegistry.set(firstName.toLowerCase(), sid);
-    friendRegistry.set(name.toLowerCase(), sid);
+    staticFriendRegistry.set(firstName.toLowerCase(), sid);
+    staticFriendRegistry.set(name.toLowerCase(), sid);
 
     if (nickname) {
       for (const part of nickname.split(/\s+or\s+/i)) {
-        friendRegistry.set(part.trim().toLowerCase(), sid);
+        staticFriendRegistry.set(part.trim().toLowerCase(), sid);
       }
     }
   }
 
-  return friendRegistry;
+  return staticFriendRegistry;
+};
+
+// Live friend list from Splitwise (GET /get_friends), cached with a TTL
+const FRIENDS_CACHE_TTL_MS = 60 * 60 * 1000; // 1h
+let apiFriendsCache = null;
+let apiFriendsCachedAt = 0;
+const getFriendsFromApi = async () => {
+  const isFresh = apiFriendsCache &&
+    Date.now() - apiFriendsCachedAt < FRIENDS_CACHE_TTL_MS;
+  if (isFresh) return apiFriendsCache;
+
+  const res = await splitwiseClient.get("/get_friends");
+  const registry = new Map();
+  for (const friend of res.data.friends ?? []) {
+    const sid = String(friend.id);
+    if (friend.first_name) {
+      registry.set(friend.first_name.toLowerCase(), sid);
+      if (friend.last_name) {
+        registry.set(
+          `${friend.first_name} ${friend.last_name}`.toLowerCase(), sid);
+      }
+    }
+  }
+
+  apiFriendsCache = registry;
+  apiFriendsCachedAt = Date.now();
+  return registry;
+};
+
+// Combined registry: local nicknames/aliases take precedence (Splitwise has
+// no concept of nicknames), then live friends fill in anyone not already
+// known, so new Splitwise friends resolve without a manual sync step. Live
+// lookup is best-effort — falls back to the static registry alone on error.
+export const getFriendRegistry = async () => {
+  const registry = new Map(getStaticFriendRegistry());
+
+  let apiFriends;
+  try {
+    apiFriends = await getFriendsFromApi();
+  } catch {
+    return registry;
+  }
+
+  for (const [name, id] of apiFriends) {
+    if (!registry.has(name)) registry.set(name, id);
+  }
+
+  return registry;
+};
+
+// Live currency list from Splitwise (GET /get_currencies), cached
+// indefinitely per instance since the list essentially never changes
+let supportedCurrencies = null;
+export const getSupportedCurrencies = async () => {
+  if (supportedCurrencies) return supportedCurrencies;
+
+  const res = await splitwiseClient.get("/get_currencies");
+  supportedCurrencies = new Set(
+    (res.data.currencies ?? []).map((c) => c.currency_code.toUpperCase()));
+  return supportedCurrencies;
 };
 
 // Equal-split calculator for N+1 people (payer + others)
@@ -85,33 +179,19 @@ const splitEqual = (amount, numOthers) => {
 
 // Creator for shared expenses (payer + N others, split equally)
 export const createSharedExpense = async (
-  description, amount, currency, otherPersonIds, payerId, details = "") => {
+  description, amount, currency, otherPersonIds, payerId, details = "",
+  date) => {
   const {cost, payerOwed, otherOwed} = splitEqual(
     amount, otherPersonIds.length);
 
-  const fullDetails = [details, "Created with Guimail"]
-    .filter(Boolean).join("\n\n");
+  const shares = [
+    {userId: payerId, paid: cost, owed: payerOwed},
+    ...otherPersonIds.map((id) => (
+      {userId: id, paid: "0.00", owed: otherOwed})),
+  ];
 
-  const payload = {
-    cost,
-    description,
-    details: fullDetails,
-    currency_code: currency,
-    group_id: 0,
-    users__0__user_id: payerId,
-    users__0__paid_share: cost,
-    users__0__owed_share: payerOwed,
-  };
-
-  otherPersonIds.forEach((id, i) => {
-    payload[`users__${i + 1}__user_id`] = id;
-    payload[`users__${i + 1}__paid_share`] = "0.00";
-    payload[`users__${i + 1}__owed_share`] = otherOwed;
-  });
-
-  const res = await splitwiseClient.post("/create_expense", payload);
-  checkSplitwiseError(res.data);
-  return res;
+  return createExpenseFromShares(
+    description, amount, currency, shares, details, date);
 };
 
 // Creator for expenses with Georgia
