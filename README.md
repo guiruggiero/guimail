@@ -17,7 +17,7 @@ An intelligent multi-purpose email processing AI agent. Forward any email to Gui
 
 ### ✨ Features
 
-- **Event extraction** with smart timezone detection, handling of relative dates ("tomorrow", "next Friday"), and flight information
+- **Event extraction** with smart timezone detection, handling of relative dates ("tomorrow", "next Friday"), flight information, custom reminders, and custom color coding
 - **Google Calendar integration** with per-calendar routing
 - **FlightAware AeroAPI integration** for IATA->ICAO code mapping and flight tracking links
 - **Email summarization** for quick insights from lengthy content
