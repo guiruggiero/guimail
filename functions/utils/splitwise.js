@@ -103,18 +103,6 @@ export const getFriendRegistry = () => {
   return friendRegistry;
 };
 
-// Live currency list from Splitwise (GET /get_currencies), cached
-// indefinitely per instance since the list essentially never changes
-let supportedCurrencies = null;
-export const getSupportedCurrencies = async () => {
-  if (supportedCurrencies) return supportedCurrencies;
-
-  const res = await splitwiseClient.get("/get_currencies");
-  supportedCurrencies = new Set(
-    (res.data.currencies ?? []).map((c) => c.currency_code.toUpperCase()));
-  return supportedCurrencies;
-};
-
 // Equal-split calculator for N+1 people (payer + others)
 const splitEqual = (amount, numOthers) => {
   const totalParts = numOthers + 1;

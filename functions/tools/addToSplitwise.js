@@ -3,7 +3,6 @@ import * as Sentry from "@sentry/node";
 import {Type} from "@google/genai";
 import {
   getFriendRegistry,
-  getSupportedCurrencies,
   createSoloExpense,
   createSharedExpense,
   createExpenseFromShares,
@@ -13,9 +12,6 @@ const SPLITWISE_LINK = {
   url: "https://secure.splitwise.com/#/activity",
   label: "View in Splitwise",
 };
-
-// Skip the getSupportedCurrencies() lookup for these, no need for it
-const COMMON_CURRENCIES = new Set(["USD", "EUR", "BRL"]);
 
 export const definition = {
   name: "addToSplitwise",
@@ -113,25 +109,8 @@ export const handler = async (args) => {
   }
   const confidence = Math.round(args.confidence * 100);
 
-  // Validate uncommon currencies against Splitwise's supported list; if the
-  // lookup itself fails, skip it and let create_expense reject it instead -
-  // this must not become a failure point for expense creation
+  // Splitwise's create_expense rejects an invalid currency_code on its own
   const currencyCode = args.currency.toUpperCase();
-  if (!COMMON_CURRENCIES.has(currencyCode)) {
-    let supportedCurrencies;
-    try {
-      supportedCurrencies = await getSupportedCurrencies();
-    } catch (error) {
-      Sentry.logger.warn(
-        "[8] Tool: Splitwise currency lookup failed, skipping validation", {
-          currency: currencyCode,
-          error: error.message,
-        });
-    }
-    if (supportedCurrencies && !supportedCurrencies.has(currencyCode)) {
-      throw new Error(`Unsupported currency: ${args.currency}`);
-    }
-  }
   const formattedAmount = formatAmount(args.amount, currencyCode);
 
   const names = (args.splitWith ?? []).map((n) => n.toLowerCase());
