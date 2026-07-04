@@ -34,7 +34,6 @@
     "deploy": "npx firebase deploy --only functions:guimail",
     "prompt-pull": "node --env-file=.env scripts/promptSync.js pull",
     "prompt-push": "node --env-file=.env scripts/promptSync.js push",
-    "friends": "node scripts/friends.js",
-    "tasks-token": "node --env-file=.env scripts/getTasksRefreshToken.js"
+    "friends": "node scripts/friends.js"
   }
 }

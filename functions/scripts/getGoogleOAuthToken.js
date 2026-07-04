@@ -2,21 +2,27 @@
 import {google} from "googleapis";
 import {createInterface} from "node:readline/promises";
 
-// One-off OAuth2 flow to obtain a Google Tasks refresh token.
-// Not deployed with the function; run locally with `npm run tasks-token`.
+// One-off OAuth2 flow to obtain a refresh token for any Google API scope.
+// Not deployed with the function; run locally, e.g.:
+//   node --env-file=.env scripts/getGoogleOAuthToken.js https://www.googleapis.com/auth/tasks
 const REDIRECT_URI = "http://localhost";
-const SCOPES = ["https://www.googleapis.com/auth/tasks"];
+
+const scope = process.argv[2];
+if (!scope) {
+  console.error("Usage: node scripts/getGoogleOAuthToken.js <scope>");
+  process.exit(1);
+}
 
 const oauth2Client = new google.auth.OAuth2(
-  process.env.GOOGLE_TASKS_CLIENT_ID,
-  process.env.GOOGLE_TASKS_CLIENT_SECRET,
+  process.env.GOOGLE_OAUTH_CLIENT_ID,
+  process.env.GOOGLE_OAUTH_CLIENT_SECRET,
   REDIRECT_URI,
 );
 
 const authUrl = oauth2Client.generateAuthUrl({
   access_type: "offline",
   prompt: "consent",
-  scope: SCOPES,
+  scope: [scope],
 });
 
 console.log("1. Open this URL, sign in, and approve access:\n");
@@ -47,5 +53,5 @@ if (!tokens.refresh_token) {
   process.exit(1);
 }
 
-console.log("\nAdd this to functions/.env:\n");
-console.log(`GOOGLE_TASKS_REFRESH_TOKEN=${tokens.refresh_token}`);
+console.log(`\nRefresh token for scope "${scope}":\n`);
+console.log(tokens.refresh_token);
