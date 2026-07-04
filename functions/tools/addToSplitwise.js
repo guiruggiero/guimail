@@ -85,9 +85,8 @@ export const definition = {
   },
 };
 
-// Formats an amount for display, falling back to a plain string if Intl
-// doesn't recognize the currency code (Splitwise supports some pseudo/
-// unofficial codes, e.g. BTC)
+// Formats an amount for display, falling back to a plain string for codes
+// Intl doesn't recognize (Splitwise allows some unofficial ones, e.g. BTC)
 const formatAmount = (amount, currency) => {
   try {
     return new Intl.NumberFormat("en-US", {style: "currency", currency})
