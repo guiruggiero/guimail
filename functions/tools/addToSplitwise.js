@@ -85,8 +85,7 @@ export const definition = {
   },
 };
 
-// Formats an amount for display, falling back to a plain string for codes
-// Intl doesn't recognize (Splitwise allows some unofficial ones, e.g. BTC)
+// Format amount for display, falling back to plain string for codes
 const formatAmount = (amount, currency) => {
   try {
     return new Intl.NumberFormat("en-US", {style: "currency", currency})
@@ -96,8 +95,7 @@ const formatAmount = (amount, currency) => {
   }
 };
 
-// Resolves a lowercase name to a Splitwise ID; "gui" is the account owner
-// (not a friend), everyone else comes from the friend registry
+// Resolves a lowercase name to a Splitwise ID
 const resolveId = (name, friends) =>
   name === "gui" ? process.env.SPLITWISE_ID_GUI : friends.get(name);
 
