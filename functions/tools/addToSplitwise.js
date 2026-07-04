@@ -14,6 +14,9 @@ const SPLITWISE_LINK = {
   label: "View in Splitwise",
 };
 
+// Skip the getSupportedCurrencies() lookup for these, no need for it
+const COMMON_CURRENCIES = new Set(["USD", "EUR", "BRL"]);
+
 export const definition = {
   name: "addToSplitwise",
   description: "Adds an expense to Splitwise to be shared with other people",
@@ -110,11 +113,24 @@ export const handler = async (args) => {
   }
   const confidence = Math.round(args.confidence * 100);
 
-  // Validate currency against Splitwise's supported list
+  // Validate uncommon currencies against Splitwise's supported list; if the
+  // lookup itself fails, skip it and let create_expense reject it instead -
+  // this must not become a failure point for expense creation
   const currencyCode = args.currency.toUpperCase();
-  const supportedCurrencies = await getSupportedCurrencies();
-  if (!supportedCurrencies.has(currencyCode)) {
-    throw new Error(`Unsupported currency: ${args.currency}`);
+  if (!COMMON_CURRENCIES.has(currencyCode)) {
+    let supportedCurrencies;
+    try {
+      supportedCurrencies = await getSupportedCurrencies();
+    } catch (error) {
+      Sentry.logger.warn(
+        "[8] Tool: Splitwise currency lookup failed, skipping validation", {
+          currency: currencyCode,
+          error: error.message,
+        });
+    }
+    if (supportedCurrencies && !supportedCurrencies.has(currencyCode)) {
+      throw new Error(`Unsupported currency: ${args.currency}`);
+    }
   }
   const formattedAmount = formatAmount(args.amount, currencyCode);
 
