@@ -78,9 +78,9 @@ export const definition = {
           required: ["method", "minutes"],
         },
       },
-      isPanaInvest: {
+      isSpecialProject: {
         type: Type.BOOLEAN,
-        description: "True if the event relates to the PanaInvest" +
+        description: "True if the event relates to a specially-tagged" +
           " project, which colors it Basil (green) for quick visual" +
           " identification on the calendar. False for everything else.",
       },
@@ -148,7 +148,7 @@ export const handler = async (args) => {
     };
   }
 
-  if (args.isPanaInvest) {
+  if (args.isSpecialProject) {
     eventResource.colorId = "10"; // Basil
   }
 
