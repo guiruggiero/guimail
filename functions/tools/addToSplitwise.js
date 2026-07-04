@@ -98,8 +98,6 @@ const formatAmount = (amount, currency) => {
   }
 };
 
-const titleCase = (name) => name.charAt(0).toUpperCase() + name.slice(1);
-
 // Resolves a lowercase name to a Splitwise ID; "gui" is the account owner
 // (not a friend), everyone else comes from the friend registry
 const resolveId = (name, friends) =>
@@ -150,8 +148,10 @@ export const handler = async (args) => {
       if (unknownNames.length > 0 || !sumValid) {
         const issues = [];
         if (unknownNames.length > 0) {
-          issues.push(
-            `Could not resolve: ${unknownNames.map(titleCase).join(", ")}`);
+          const unknownList = unknownNames
+            .map((n) => n.charAt(0).toUpperCase() + n.slice(1))
+            .join(", ");
+          issues.push(`Could not resolve: ${unknownList}`);
         }
         if (!sumValid) issues.push("Owed amounts did not add up");
 
@@ -198,7 +198,8 @@ export const handler = async (args) => {
       });
 
       const withNames = args.owedAmounts
-        .map(({name}) => titleCase(name)).join(", ");
+        .map(({name}) => name.charAt(0).toUpperCase() + name.slice(1))
+        .join(", ");
       return {
         type: "splitwiseExpense",
         text: `"${args.title}" of ${formattedAmount} added to ` +
@@ -219,7 +220,9 @@ export const handler = async (args) => {
 
     // Fall back to solo expense if any names couldn't be resolved
     if (unknownNames.length > 0) {
-      const unknownList = unknownNames.map(titleCase).join(", ");
+      const unknownList = unknownNames
+        .map((n) => n.charAt(0).toUpperCase() + n.slice(1))
+        .join(", ");
       const fallbackDetails = [
         args.details, `Could not resolve: ${unknownList}`,
       ].filter(Boolean).join("\n\n");
@@ -254,7 +257,9 @@ export const handler = async (args) => {
       expense: expenseResponse.data,
     });
 
-    const withNames = names.map(titleCase).join(", ");
+    const withNames = names
+      .map((n) => n.charAt(0).toUpperCase() + n.slice(1))
+      .join(", ");
     return {
       type: "splitwiseExpense",
       text: `"${args.title}" of ${formattedAmount} added to ` +
