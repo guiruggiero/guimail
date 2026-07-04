@@ -56,6 +56,34 @@ export const definition = {
         description: "IATA flight number for flight events" +
           " (e.g. 'AA123'). Omit for non-flight events.",
       },
+      reminders: {
+        type: Type.ARRAY,
+        description: "Custom reminders/notifications before the event," +
+          " overriding the calendar's default reminders. Omit to use the" +
+          " calendar's default reminder settings.",
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            method: {
+              type: Type.STRING,
+              enum: ["email", "popup"],
+              description: "Notification method",
+            },
+            minutes: {
+              type: Type.NUMBER,
+              description: "Minutes before the event start to send the" +
+                " reminder (e.g. 20160 for 2 weeks, 1440 for 1 day)",
+            },
+          },
+          required: ["method", "minutes"],
+        },
+      },
+      isPanaInvest: {
+        type: Type.BOOLEAN,
+        description: "True if the event relates to the PanaInvest" +
+          " project, which colors it Basil (green) for quick visual" +
+          " identification on the calendar. False for everything else.",
+      },
       confidence: {
         type: Type.NUMBER,
         description: "Confidence score between 0 and 1 indicating" +
@@ -108,6 +136,20 @@ export const handler = async (args) => {
   } else {
     eventResource.start = {dateTime: args.start, timeZone: args.timeZone};
     eventResource.end = {dateTime: args.end, timeZone: args.timeZone};
+  }
+
+  if (args.reminders?.length) {
+    eventResource.reminders = {
+      useDefault: false,
+      overrides: args.reminders.slice(0, 5).map((reminder) => ({
+        method: reminder.method,
+        minutes: Math.min(Math.max(Math.round(reminder.minutes), 0), 40320),
+      })),
+    };
+  }
+
+  if (args.isPanaInvest) {
+    eventResource.colorId = "10"; // Basil
   }
 
   // Create event via Google Calendar API
