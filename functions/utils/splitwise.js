@@ -70,15 +70,14 @@ export const createExpenseFromShares = async (
   return res;
 };
 
-// Static friend registry from SPLITWISE_FRIENDS env var (nicknames/aliases)
-// array of {id, name, nickname}
-let staticFriendRegistry = null;
-const getStaticFriendRegistry = () => {
-  if (staticFriendRegistry) return staticFriendRegistry;
+// Friend registry from SPLITWISE_FRIENDS env var, array of {id, name, nickname}
+let friendRegistry = null;
+export const getFriendRegistry = () => {
+  if (friendRegistry) return friendRegistry;
 
-  staticFriendRegistry = new Map();
+  friendRegistry = new Map();
   const raw = process.env.SPLITWISE_FRIENDS;
-  if (!raw) return staticFriendRegistry;
+  if (!raw) return friendRegistry;
 
   let friends;
   try {
@@ -91,65 +90,17 @@ const getStaticFriendRegistry = () => {
     const sid = String(id);
 
     const [firstName] = name.split(" ");
-    staticFriendRegistry.set(firstName.toLowerCase(), sid);
-    staticFriendRegistry.set(name.toLowerCase(), sid);
+    friendRegistry.set(firstName.toLowerCase(), sid);
+    friendRegistry.set(name.toLowerCase(), sid);
 
     if (nickname) {
       for (const part of nickname.split(/\s+or\s+/i)) {
-        staticFriendRegistry.set(part.trim().toLowerCase(), sid);
+        friendRegistry.set(part.trim().toLowerCase(), sid);
       }
     }
   }
 
-  return staticFriendRegistry;
-};
-
-// Live friend list from Splitwise (GET /get_friends), cached with a TTL
-const FRIENDS_CACHE_TTL_MS = 60 * 60 * 1000; // 1h
-let apiFriendsCache = null;
-let apiFriendsCachedAt = 0;
-const getFriendsFromApi = async () => {
-  const isFresh = apiFriendsCache &&
-    Date.now() - apiFriendsCachedAt < FRIENDS_CACHE_TTL_MS;
-  if (isFresh) return apiFriendsCache;
-
-  const res = await splitwiseClient.get("/get_friends");
-  const registry = new Map();
-  for (const friend of res.data.friends ?? []) {
-    const sid = String(friend.id);
-    if (friend.first_name) {
-      registry.set(friend.first_name.toLowerCase(), sid);
-      if (friend.last_name) {
-        registry.set(
-          `${friend.first_name} ${friend.last_name}`.toLowerCase(), sid);
-      }
-    }
-  }
-
-  apiFriendsCache = registry;
-  apiFriendsCachedAt = Date.now();
-  return registry;
-};
-
-// Combined registry: local nicknames/aliases take precedence (Splitwise has
-// no concept of nicknames), then live friends fill in anyone not already
-// known, so new Splitwise friends resolve without a manual sync step. Live
-// lookup is best-effort — falls back to the static registry alone on error.
-export const getFriendRegistry = async () => {
-  const registry = new Map(getStaticFriendRegistry());
-
-  let apiFriends;
-  try {
-    apiFriends = await getFriendsFromApi();
-  } catch {
-    return registry;
-  }
-
-  for (const [name, id] of apiFriends) {
-    if (!registry.has(name)) registry.set(name, id);
-  }
-
-  return registry;
+  return friendRegistry;
 };
 
 // Live currency list from Splitwise (GET /get_currencies), cached

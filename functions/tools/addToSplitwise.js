@@ -124,7 +124,7 @@ export const handler = async (args) => {
 
   // Uneven splits / multiple payers via explicit per-person shares
   if (args.shares?.length > 0) {
-    const friends = await getFriendRegistry();
+    const friends = getFriendRegistry();
 
     const unknownNames = [];
     const resolvedShares = [];
@@ -200,7 +200,7 @@ export const handler = async (args) => {
   const names = (args.splitWith ?? []).map((n) => n.toLowerCase());
 
   if (names.length > 0) {
-    const friends = await getFriendRegistry();
+    const friends = getFriendRegistry();
 
     // Resolve payer ID (defaults to Gui)
     const payerName = args.paidBy?.toLowerCase();
