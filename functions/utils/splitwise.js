@@ -19,9 +19,15 @@ const checkSplitwiseError = (expenseData) => {
   }
 };
 
+// Normalizes a bare date (no time) to noon UTC, avoiding day-shift issues
+const normalizeDate = (date) => {
+  if (!date) return undefined;
+  return date.includes("T") ? date : `${date}T12:00:00Z`;
+};
+
 // Creator for solo expenses (single-user)
 export const createSoloExpense = async (
-  description, amount, currency, details = "") => {
+  description, amount, currency, details = "", date) => {
   const fullDetails = [details, "Created with Guimail"]
     .filter(Boolean).join("\n\n");
 
@@ -30,9 +36,36 @@ export const createSoloExpense = async (
     description,
     details: fullDetails,
     currency_code: currency,
+    date: normalizeDate(date),
     group_id: 0,
     split_equally: true,
   });
+  checkSplitwiseError(res.data);
+  return res;
+};
+
+// Creator for expenses from arbitrary per-person paid/owed shares
+export const createExpenseFromShares = async (
+  description, amount, currency, shares, details = "", date) => {
+  const fullDetails = [details, "Created with Guimail"]
+    .filter(Boolean).join("\n\n");
+
+  const payload = {
+    cost: amount.toFixed(2),
+    description,
+    details: fullDetails,
+    currency_code: currency,
+    date: normalizeDate(date),
+    group_id: 0,
+  };
+
+  shares.forEach(({userId, paid, owed}, i) => {
+    payload[`users__${i}__user_id`] = userId;
+    payload[`users__${i}__paid_share`] = paid;
+    payload[`users__${i}__owed_share`] = owed;
+  });
+
+  const res = await splitwiseClient.post("/create_expense", payload);
   checkSplitwiseError(res.data);
   return res;
 };
@@ -85,33 +118,19 @@ const splitEqual = (amount, numOthers) => {
 
 // Creator for shared expenses (payer + N others, split equally)
 export const createSharedExpense = async (
-  description, amount, currency, otherPersonIds, payerId, details = "") => {
+  description, amount, currency, otherPersonIds, payerId, details = "",
+  date) => {
   const {cost, payerOwed, otherOwed} = splitEqual(
     amount, otherPersonIds.length);
 
-  const fullDetails = [details, "Created with Guimail"]
-    .filter(Boolean).join("\n\n");
+  const shares = [
+    {userId: payerId, paid: cost, owed: payerOwed},
+    ...otherPersonIds.map((id) => (
+      {userId: id, paid: "0.00", owed: otherOwed})),
+  ];
 
-  const payload = {
-    cost,
-    description,
-    details: fullDetails,
-    currency_code: currency,
-    group_id: 0,
-    users__0__user_id: payerId,
-    users__0__paid_share: cost,
-    users__0__owed_share: payerOwed,
-  };
-
-  otherPersonIds.forEach((id, i) => {
-    payload[`users__${i + 1}__user_id`] = id;
-    payload[`users__${i + 1}__paid_share`] = "0.00";
-    payload[`users__${i + 1}__owed_share`] = otherOwed;
-  });
-
-  const res = await splitwiseClient.post("/create_expense", payload);
-  checkSplitwiseError(res.data);
-  return res;
+  return createExpenseFromShares(
+    description, amount, currency, shares, details, date);
 };
 
 // Creator for expenses with Georgia

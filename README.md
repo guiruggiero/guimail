@@ -22,7 +22,7 @@ An intelligent multi-purpose email processing AI agent. Forward any email to Gui
 - **FlightAware AeroAPI integration** for IATA->ICAO code mapping and flight tracking links
 - **Email summarization** for quick insights from lengthy content
 - **Budget tracking** with Google Sheets
-- **Expense splitting** with Splitwise
+- **Expense splitting** with Splitwise, supporting uneven splits, any currency, and backdating
 - **Claude Code integration** for running development tasks against your own dev server via a self-hosted gateway, with **multi-turn session support** for follow-up requests
 - **Helpful responses** with proper **email threading**
 - **Multi-tool AI agent** using Gemini Flash model through the Gemini API with extensible architecture for easy addition of new features
