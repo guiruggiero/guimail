@@ -15,7 +15,7 @@ The `askClaudeCode` tool handler calls the Claude Code Gateway, which now lives 
 
 **Reply threading**: replies set `In-Reply-To` and `References` headers using the original `messageID` and `references` query params.
 
-**HTTP status code contract**: the function returns `502` for retryable errors (Gemini, Langfuse, Sheets API) and `500` for deterministic/post-write errors; the worker retries on `> 500` only.
+**HTTP status code contract**: the function returns `502` for retryable errors (Gemini, Langfuse, Guiddleware's Sheets route) and `500` for deterministic/post-write errors; the worker retries on `> 500` only.
 
 **Sentry**: errors logged to the `guimail` project (`GUIMAIL-*` issue IDs).
 

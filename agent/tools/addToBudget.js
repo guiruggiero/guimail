@@ -1,8 +1,7 @@
 // Imports
 import * as Sentry from "@sentry/node";
 import {Type} from "@google/genai";
-import {getSheetsClient} from "../utils/googleSheets.js";
-import {createExpense} from "../utils/guiddleware.js";
+import {updateSheet, createExpense} from "../utils/guiddleware.js";
 
 const BUDGET_LINK = {
   url: "https://docs.google.com/spreadsheets/d/" +
@@ -56,27 +55,21 @@ export const handler = async (args) => {
     throw new Error(`Low confidence: ${args.confidence}`);
   }
 
-  // Get cached Google Sheets client
-  const sheets = await getSheetsClient();
-
-  // Update multiple cells at once
-  await sheets.spreadsheets.values.batchUpdate({
+  // Update multiple cells at once, via Guiddleware
+  await updateSheet({
     spreadsheetId: process.env.GOOGLE_SHEET_ID,
-    resource: {
-      valueInputOption: "USER_ENTERED", // Data interpreted as if user typed
-      data: [
-        {
-          range: `Y${issuerToRow[args.issuer]}`,
-          values: [[args.balance]], // Must be in a 2D array
-        },
-        {
-          range: `Z${issuerToRow[args.issuer]}`,
-          values: [[
-            new Date().toLocaleString("en-US", {timeZone: "CET"}),
-          ]],
-        },
-      ],
-    },
+    data: [
+      {
+        range: `Y${issuerToRow[args.issuer]}`,
+        values: [[args.balance]], // Must be in a 2D array
+      },
+      {
+        range: `Z${issuerToRow[args.issuer]}`,
+        values: [[
+          new Date().toLocaleString("en-US", {timeZone: "CET"}),
+        ]],
+      },
+    ],
   });
   Sentry.logger.info("[8a] Tool: Google Sheet updated", {
     issuer: args.issuer,

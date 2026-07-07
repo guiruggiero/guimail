@@ -36,3 +36,9 @@ export const createTask = async (payload) => {
   const res = await guiddlewareClient.post("/tasks", payload);
   return res.data;
 };
+
+// Writes cell ranges to a Google Sheet
+export const updateSheet = async (payload) => {
+  const res = await guiddlewareClient.post("/sheets/values", payload);
+  return res.data;
+};
