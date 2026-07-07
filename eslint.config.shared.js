@@ -1,4 +1,4 @@
-// Shared ESLint rules for worker/
+// Shared ESLint rules for email-worker/
 export const sharedRules = {
     "no-unused-vars": "warn",
     "no-useless-assignment": "warn",

@@ -34,13 +34,13 @@ An intelligent multi-purpose email processing AI agent. Forward any email to Gui
 
 There are two main components in this repo, plus a shared service in a separate repo:
 
-#### Cloudflare Email Worker (`worker/`)
+#### Cloudflare Email Worker (`email-worker/`)
 - Receives incoming emails via Cloudflare Email Routing
 - Enforces sender allowlist and size limits
 - Forwards processed emails to Firebase Cloud Function
 - Handles email replies back to the original sender
 
-#### Firebase Cloud Function (`functions/`)
+#### Firebase Cloud Function (`agent/`)
 - Processes email content using Gemini API with tool calling
 - Automatically chooses tool for calendar event, summarization, budget tracking, expense creation, task creation, or Claude Code task execution
 - Extracts structured data with validation and confidence scoring

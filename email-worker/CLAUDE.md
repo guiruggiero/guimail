@@ -1,6 +1,6 @@
-# worker/CLAUDE.md
+# email-worker/CLAUDE.md
 
-Cloudflare Email Worker (`worker/src/index.js`). Receives emails via Cloudflare Email Routing.
+Cloudflare Email Worker (`email-worker/src/index.js`), deployed as the `guimail` Worker (name set in `wrangler.jsonc`, unrelated to the folder name). Receives emails via Cloudflare Email Routing.
 
 ## Pipeline
 

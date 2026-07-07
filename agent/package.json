@@ -1,5 +1,5 @@
 {
-  "name": "functions",
+  "name": "agent",
   "description": "Cloud Functions for Firebase",
   "type": "module",
   "engines": {

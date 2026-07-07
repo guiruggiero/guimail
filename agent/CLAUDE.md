@@ -1,6 +1,6 @@
-# functions/CLAUDE.md
+# agent/CLAUDE.md
 
-Firebase Cloud Function (`functions/index.js`). Single exported function `guimail`.
+Firebase Cloud Function (`agent/index.js`). Single exported function `guimail`.
 
 ## Pipeline
 
@@ -16,7 +16,7 @@ Firebase Cloud Function (`functions/index.js`). Single exported function `guimai
 
 ## Tool handlers
 
-Each in `functions/tools/`, assembled into `toolHandlers` in `index.js`.
+Each in `agent/tools/`, assembled into `toolHandlers` in `index.js`.
 
 - `addToCalendar` — resolves an optional `flightNumber` (IATA) via Guiddleware's `/flightaware/track` first (best-effort, failures captured in Sentry), composes the description (embedding the tracking link if found), then calls Guiddleware's `POST /calendar/events`; accepts optional `reminders` (array of `{method: "email"|"popup", minutes}`, clamped to 5 entries and 0–40320 minutes) and `isSpecialProject` boolean (colors the event Basil); returns `toolResult.link` as `{url, label}` for a "View in Google Calendar" link
 - `summarizeEmail` — returns the summary text
@@ -27,11 +27,11 @@ Each in `functions/tools/`, assembled into `toolHandlers` in `index.js`.
 
 **Tool return shape**: `{ type, text, html?, link?, confidence?, sessionId? }`. All data-extraction tools include `confidence`; handlers reject calls below 0.5. `index.js` assembles replies in order: main text → link → confidence → sign-off → session marker; uses `toolResult.html` directly for the HTML part when provided. When `toolResult.sessionId` is present, appends `[guimail-session:<id>]` as plain text and a hidden `<span>` in HTML.
 
-**Adding a new tool**: create `functions/tools/<name>.js` with `definition` and `handler` exports, then add both to `functionDeclarations` and `toolHandlers` in `index.js`.
+**Adding a new tool**: create `agent/tools/<name>.js` with `definition` and `handler` exports, then add both to `functionDeclarations` and `toolHandlers` in `index.js`.
 
 ## Utilities
 
-Each in `functions/utils/`.
+Each in `agent/utils/`.
 
 - `axiosClient.js` — `createRetryClient(config, retries = 2, retryCondition?)`: shared axios+retry factory (exponential backoff, network/5xx by default)
 - `claudeCode.js` — axios client for the Claude Code Gateway (185s timeout, 1 retry excluding 504), `runPrompt(prompt, sessionId?, resumePrompt?)`
@@ -40,18 +40,18 @@ Each in `functions/utils/`.
 - `googleSheets.js` — Promise-cached Google Sheets client (`getSheetsClient`), for the budget spreadsheet
 - `langfuse.js` — eagerly initialized Langfuse client, `getPrompt(name)`
 
-Splitwise, Google Calendar, and FlightAware clients used to live here too — they moved to the shared `guiddleware` repo since GuiDo and Guiwise need the same integrations; see `guiddleware.js` above and `guiddleware`'s own `functions/CLAUDE.md`.
+Splitwise, Google Calendar, and FlightAware clients used to live here too — they moved to the shared `guiddleware` repo since GuiDo and Guiwise need the same integrations; see `guiddleware.js` above and `guiddleware`'s own `tools/CLAUDE.md`.
 
 ## Required env vars
 
 `GEMINI_API_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_PUBLIC_KEY`, `SENTRY_DSN`, `WORKER_SECRET`, `GOOGLE_SHEET_ID`, `EMAIL_GUIMAIL`, `GUIDDLEWARE_URL`, `GUIDDLEWARE_SECRET_GUIMAIL`, `CLAUDE_CODE_GATEWAY_URL`, `CLAUDE_CODE_GATEWAY_SECRET_GUIMAIL`
 
-All env vars kept in `functions/.env` (gitignored), picked up automatically by Firebase CLI on deploy.
+All env vars kept in `agent/.env` (gitignored), picked up automatically by Firebase CLI on deploy.
 
 ## Prompt management
 
-`functions/prompt.md` is the local copy of the system prompt (gitignored). The live prompt is on Langfuse; `prompt.md` exists so Claude Code always has the full prompt in context. Use `npm run prompt-pull` / `npm run prompt-push` to sync. Always apply changes to the system prompt, let the user know, and offer to push to Langfuse; but never mention it in the commit message.
+`agent/prompt.md` is the local copy of the system prompt (gitignored). The live prompt is on Langfuse; `prompt.md` exists so Claude Code always has the full prompt in context. Use `npm run prompt-pull` / `npm run prompt-push` to sync. Always apply changes to the system prompt, let the user know, and offer to push to Langfuse; but never mention it in the commit message.
 
 ## Local scripts
 
-`functions/scripts/` — not deployed with the function. `promptSync.js` (Langfuse pull/push) only; the Splitwise friend-registry sync (`friends.js`/`friends.json`) moved to `guiddleware`'s `functions/scripts/`, since the friend registry lives there now.
+`agent/scripts/` — not deployed with the function. `promptSync.js` (Langfuse pull/push) only; the Splitwise friend-registry sync (`friends.js`/`friends.json`) moved to `guiddleware`'s `tools/scripts/`, since the friend registry lives there now.
