@@ -22,6 +22,10 @@ import {
   handler as addToSplitwiseHandler,
 } from "./tools/addToSplitwise.js";
 import {
+  definition as addToTasksDef,
+  handler as addToTasksHandler,
+} from "./tools/addToTasks.js";
+import {
   definition as askClaudeCodeDef,
   handler as askClaudeCodeHandler,
 } from "./tools/askClaudeCode.js";
@@ -51,6 +55,7 @@ const modelConfig = {
         summarizeEmailDef,
         addToBudgetDef,
         addToSplitwiseDef,
+        addToTasksDef,
         askClaudeCodeDef,
       ],
     }],
@@ -68,6 +73,7 @@ const toolHandlers = {
   [summarizeEmailDef.name]: summarizeEmailHandler,
   [addToBudgetDef.name]: addToBudgetHandler,
   [addToSplitwiseDef.name]: addToSplitwiseHandler,
+  [addToTasksDef.name]: addToTasksHandler,
   [askClaudeCodeDef.name]: askClaudeCodeHandler,
 };
 

@@ -30,3 +30,9 @@ export const getFlightAwareUrl = async (flightNumber) => {
   });
   return res.data.url;
 };
+
+// Creates a Google Task
+export const createTask = async (payload) => {
+  const res = await guiddlewareClient.post("/tasks", payload);
+  return res.data;
+};
