@@ -3,9 +3,8 @@ version: 2
 updates:
   - package-ecosystem: npm
     directories:
-      - /worker
-      - /functions
-      - /gateway
+      - /email-worker
+      - /agent
     schedule:
       interval: weekly
       day: saturday
