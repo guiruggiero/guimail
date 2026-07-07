@@ -10,7 +10,7 @@ const gatewayClient = createRetryClient({
   baseURL: process.env.CLAUDE_CODE_GATEWAY_URL,
   timeout: 185000, // ~3 minutes, slightly over gateway timeout
   headers: {
-    "Authorization": `Bearer ${process.env.CLAUDE_CODE_GATEWAY_SECRET}`,
+    "Authorization": `Bearer ${process.env.CLAUDE_CODE_GATEWAY_SECRET_GUIMAIL}`,
     "Content-Type": "application/json",
   },
 }, 1, gatewayRetryCondition);

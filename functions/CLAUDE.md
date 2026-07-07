@@ -43,7 +43,7 @@ Each in `functions/utils/`.
 
 ## Required env vars
 
-`GEMINI_API_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_PUBLIC_KEY`, `SENTRY_DSN`, `WORKER_SECRET`, `SPLITWISE_API_KEY`, `GOOGLE_SHEET_ID`, `GOOGLE_CAL_DEFAULT_ID`, `GOOGLE_CAL_SHARED_ID`, `EMAIL_GUIMAIL`, `FLIGHTAWARE_AEROAPI_KEY`, `CLAUDE_CODE_GATEWAY_URL`, `CLAUDE_CODE_GATEWAY_SECRET`
+`GEMINI_API_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_PUBLIC_KEY`, `SENTRY_DSN`, `WORKER_SECRET`, `SPLITWISE_API_KEY`, `GOOGLE_SHEET_ID`, `GOOGLE_CAL_DEFAULT_ID`, `GOOGLE_CAL_SHARED_ID`, `EMAIL_GUIMAIL`, `FLIGHTAWARE_AEROAPI_KEY`, `CLAUDE_CODE_GATEWAY_URL`, `CLAUDE_CODE_GATEWAY_SECRET_GUIMAIL`
 
 - `SPLITWISE_FRIENDS` — minified JSON array of `{id, name, nickname}`; source of truth is `functions/scripts/friends.json` (gitignored); run `npm run friends` to update `.env`; names are indexed by first name, full name, and each nickname token (split on spaces); `SPLITWISE_ID_GUI` and `SPLITWISE_ID_GEORGIA` remain as separate env vars
 - All env vars kept in `functions/.env` (gitignored), picked up automatically by Firebase CLI on deploy
