@@ -18,11 +18,11 @@ An intelligent multi-purpose email processing AI agent. Forward any email to Gui
 ### ✨ Features
 
 - **Event extraction** with smart timezone detection, handling of relative dates ("tomorrow", "next Friday"), flight information, custom reminders, and custom color coding
-- **Google Calendar integration** with per-calendar routing
-- **FlightAware AeroAPI integration** for IATA->ICAO code mapping and flight tracking links
+- **Google Calendar integration** with per-calendar routing, via the shared Guiddleware service
+- **FlightAware AeroAPI integration** for IATA->ICAO code mapping and flight tracking links, via the shared Guiddleware service
 - **Email summarization** for quick insights from lengthy content
 - **Budget tracking** with Google Sheets
-- **Expense splitting** with Splitwise, supporting uneven splits, any currency, and backdating
+- **Expense splitting** with Splitwise, supporting uneven splits, any currency, and backdating, via the shared Guiddleware service
 - **Claude Code integration** for running development tasks against your own dev server via a self-hosted gateway, with **multi-turn session support** for follow-up requests
 - **Helpful responses** with proper **email threading**
 - **Multi-tool AI agent** using Gemini Flash model through the Gemini API with extensible architecture for easy addition of new features
@@ -32,7 +32,7 @@ An intelligent multi-purpose email processing AI agent. Forward any email to Gui
 
 ### 🏗️ Architecture
 
-There are two main components:
+There are two main components in this repo, plus a shared service in a separate repo:
 
 #### Cloudflare Email Worker (`worker/`)
 - Receives incoming emails via Cloudflare Email Routing
@@ -42,12 +42,11 @@ There are two main components:
 
 #### Firebase Cloud Function (`functions/`)
 - Processes email content using Gemini API with tool calling
-- Automatically chooses tool for calendar event, summarization, budget tracking, expense creation, or Claude Code task execution
+- Automatically chooses tool for calendar event, summarization, budget tracking, expense creation, task creation, or Claude Code task execution
 - Extracts structured data with validation and confidence scoring
-- Creates Google Calendar events directly via API with per-calendar routing
 - Updates Google Sheets via API
-- Creates Splitwise expense via API
-- Executes Claude Code tasks via a self-hosted gateway server
+- Delegates Calendar, Splitwise, FlightAware, and Google Tasks actions to [Guiddleware](https://github.com/guiruggiero/guiddleware), a shared service also used by GuiDo and Guiwise
+- Executes Claude Code tasks via a self-hosted gateway server (also in the Guiddleware repo, deployed separately)
 - Composes and sends reply emails with proper threading
 
 ### 📦 Dependencies
@@ -58,7 +57,7 @@ There are two main components:
 - `cloudflare:email` - email worker runtime
 - `eslint` and `stylistic` - code linting
 - `firebase-functions` - serverless backend
-- `googleapis` - integration with Google Sheets and Calendar APIs
+- `googleapis` - integration with Google Sheets
 - `marked` and `remove-markdown` - markdown rendering and stripping for Claude Code replies
 - `nodemailer` - email composition
 - `postal-mime` - email parsing and content extraction

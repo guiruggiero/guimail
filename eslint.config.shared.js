@@ -1,4 +1,4 @@
-// Shared ESLint rules for worker/ and gateway/
+// Shared ESLint rules for worker/
 export const sharedRules = {
     "no-unused-vars": "warn",
     "no-useless-assignment": "warn",
