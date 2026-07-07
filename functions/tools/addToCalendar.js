@@ -1,14 +1,7 @@
 // Imports
 import * as Sentry from "@sentry/node";
 import {Type} from "@google/genai";
-import {getCalendarClient} from "../utils/googleCalendar.js";
-import {getFlightAwareUrl} from "../utils/flightAware.js";
-
-// Calendar IDs (set in Firebase env vars)
-const CALENDARS = {
-  default: process.env.GOOGLE_CAL_DEFAULT_ID,
-  shared: process.env.GOOGLE_CAL_SHARED_ID,
-};
+import {createCalendarEvent, getFlightAwareUrl} from "../utils/guiddleware.js";
 
 export const definition = {
   name: "addToCalendar",
@@ -102,65 +95,37 @@ export const handler = async (args) => {
     throw new Error(`Low confidence: ${args.confidence}`);
   }
 
-  // Fetch calendar client and optional FlightAware URL in parallel
-  const [calendar, flightAwareUrl] = await Promise.all([
-    getCalendarClient(),
-    args.flightNumber ?
-      getFlightAwareUrl(args.flightNumber).catch((error) => {
-        Sentry.captureException(error, {contexts: {
-          flightNumber: args.flightNumber,
-        }});
-        return null;
-      }) :
-      null,
-  ]);
+  // Resolve optional FlightAware URL first, then compose the description;
+  // Guiddleware's /calendar/events stays generic and doesn't know about flights
+  const flightAwareUrl = args.flightNumber ?
+    await getFlightAwareUrl(args.flightNumber).catch((error) => {
+      Sentry.captureException(error, {contexts: {
+        flightNumber: args.flightNumber,
+      }});
+      return null;
+    }) :
+    null;
 
-  // Build event resource
-  const isAllDay = !args.start.includes("T");
   const descriptionParts = [
     args.description ?? "",
     flightAwareUrl ? `Track flight: ${flightAwareUrl}` : null,
     "Created with Guimail",
   ].filter(Boolean);
-  const eventResource = {
+
+  const result = await createCalendarEvent({
     summary: args.summary,
-    description: descriptionParts.join("\n\n"),
+    start: args.start,
+    end: args.end,
+    timeZone: args.timeZone,
     location: args.location,
-    // All-day events show as free; timed events show as busy
-    transparency: isAllDay ? "transparent" : "opaque",
-  };
-
-  if (isAllDay) {
-    eventResource.start = {date: args.start};
-    eventResource.end = {date: args.end};
-  } else {
-    eventResource.start = {dateTime: args.start, timeZone: args.timeZone};
-    eventResource.end = {dateTime: args.end, timeZone: args.timeZone};
-  }
-
-  if (args.reminders?.length) {
-    eventResource.reminders = {
-      useDefault: false,
-      overrides: args.reminders.slice(0, 5).map((reminder) => ({
-        method: reminder.method,
-        minutes: Math.min(Math.max(Math.round(reminder.minutes), 0), 40320),
-      })),
-    };
-  }
-
-  if (args.isSpecialProject) {
-    eventResource.colorId = "10"; // Basil
-  }
-
-  // Create event via Google Calendar API
-  const calendarId = CALENDARS[args.calendar ?? "default"];
-  const result = await calendar.events.insert({
-    calendarId,
-    resource: eventResource,
+    description: descriptionParts.join("\n\n"),
+    calendar: args.calendar,
+    reminders: args.reminders,
+    isSpecialProject: args.isSpecialProject,
   });
+
   Sentry.logger.info("[8] Tool: Google Calendar event created", {
-    calendarId,
-    eventId: result.data.id,
+    calendar: args.calendar, eventId: result.id,
   });
 
   const calendarLabel = args.calendar === "shared" ?
@@ -170,7 +135,7 @@ export const handler = async (args) => {
     type: "calendarEvent",
     text: `Event "${args.summary}" added to ${calendarLabel} calendar.`,
     link: {
-      url: result.data.htmlLink,
+      url: result.link,
       label: "View in Google Calendar",
     },
     confidence: Math.round(args.confidence * 100),

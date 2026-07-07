@@ -2,7 +2,7 @@
 import * as Sentry from "@sentry/node";
 import {Type} from "@google/genai";
 import {getSheetsClient} from "../utils/googleSheets.js";
-import {createExpenseWithGeorgia} from "../utils/splitwise.js";
+import {createExpense} from "../utils/guiddleware.js";
 
 const BUDGET_LINK = {
   url: "https://docs.google.com/spreadsheets/d/" +
@@ -96,11 +96,17 @@ export const handler = async (args) => {
 
   // Add to Splitwise
   if (args.issuer === "Capital One") {
-    const expenseResponse = await createExpenseWithGeorgia(
-      "Capital One", args.balance, args.currency);
+    const {expense} = await createExpense({
+      description: "Capital One",
+      amount: args.balance,
+      currency: args.currency,
+      paidBy: "gui",
+      splitWith: ["georgia"],
+      source: "Guimail",
+    });
 
     Sentry.logger.info("[8b] Tool: Splitwise expense added", {
-      expenseId: expenseResponse.data.expenses?.[0]?.id,
+      expenseId: expense?.id,
     });
 
     responseText += "\n\nExpense also added to Splitwise.";

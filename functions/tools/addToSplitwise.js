@@ -1,12 +1,7 @@
 // Imports
 import * as Sentry from "@sentry/node";
 import {Type} from "@google/genai";
-import {
-  getFriendRegistry,
-  createSoloExpense,
-  createSharedExpense,
-  createExpenseFromShares,
-} from "../utils/splitwise.js";
+import {createExpense} from "../utils/guiddleware.js";
 
 const SPLITWISE_LINK = {
   url: "https://secure.splitwise.com/#/activity",
@@ -95,9 +90,7 @@ const formatAmount = (amount, currency) => {
   }
 };
 
-// Resolves a lowercase name to a Splitwise ID
-const resolveId = (name, friends) =>
-  name === "gui" ? process.env.SPLITWISE_ID_GUI : friends.get(name);
+const capitalize = (name) => name.charAt(0).toUpperCase() + name.slice(1);
 
 export const handler = async (args) => {
   // Validate confidence threshold
@@ -110,148 +103,65 @@ export const handler = async (args) => {
   const currencyCode = args.currency.toUpperCase();
   const formattedAmount = formatAmount(args.amount, currencyCode);
 
+  // Resolution, fallback logic, and expense creation all live in Guiddleware
+  const {expense, fallback, issues, unknownNames} = await createExpense({
+    description: args.title,
+    amount: args.amount,
+    currency: currencyCode,
+    details: args.details,
+    date: args.date,
+    splitWith: args.splitWith,
+    paidBy: args.paidBy,
+    owedAmounts: args.owedAmounts,
+    source: "Guimail",
+  });
+
+  Sentry.logger.info("[8] Tool: Splitwise expense added", {
+    expenseId: expense?.id, fallback, issues, unknownNames,
+  });
+
+  // Uneven-split fallback: unresolved names or amounts didn't sum correctly
+  if (fallback === "solo" && issues) {
+    return {
+      type: "splitwiseExpense",
+      text: `"${args.title}" of ${formattedAmount} added to ` +
+        `Splitwise (solo, ${issues.join("; ").toLowerCase()}).` +
+        "\n\nOpen Splitwise to fix this expense.",
+      link: SPLITWISE_LINK,
+      confidence,
+    };
+  }
+
+  // Equal-split fallback: one or more names couldn't be resolved
+  if (fallback === "solo" && unknownNames) {
+    const unknownList = unknownNames.map(capitalize).join(", ");
+    return {
+      type: "splitwiseExpense",
+      text: `"${args.title}" of ${formattedAmount} added to ` +
+        `Splitwise (solo, could not find: ${unknownList}).` +
+        "\n\nOpen Splitwise to add the missing people to this expense.",
+      link: SPLITWISE_LINK,
+      confidence,
+    };
+  }
+
+  // Uneven split, resolved successfully
+  if (args.owedAmounts?.length > 0) {
+    const withNames = args.owedAmounts
+      .map(({name}) => capitalize(name)).join(", ");
+    return {
+      type: "splitwiseExpense",
+      text: `"${args.title}" of ${formattedAmount} added to ` +
+        `Splitwise (custom split with ${withNames}).`,
+      link: SPLITWISE_LINK,
+      confidence,
+    };
+  }
+
+  // Equal split, resolved successfully
   const names = (args.splitWith ?? []).map((n) => n.toLowerCase());
-  const hasOwedAmounts = args.owedAmounts?.length > 0;
-
-  if (names.length > 0 || hasOwedAmounts) {
-    const friends = getFriendRegistry();
-
-    // Resolve payer ID (defaults to Gui)
-    const payerName = args.paidBy?.toLowerCase();
-    const payerId = resolveId(payerName ?? "gui", friends);
-    if (!payerId) throw new Error(`Unknown payer: ${payerName ?? "Gui"}`);
-
-    // Uneven split: single payer, different owed amounts per person
-    if (hasOwedAmounts) {
-      const unknownNames = [];
-      const resolvedOwed = [];
-      for (const {name, owed} of args.owedAmounts) {
-        const lowerName = name.toLowerCase();
-        const id = resolveId(lowerName, friends);
-        if (id) resolvedOwed.push({userId: id, owed});
-        else unknownNames.push(lowerName);
-      }
-
-      const totalOwed = args.owedAmounts.reduce((sum, s) => sum + s.owed, 0);
-      const sumValid = Math.abs(totalOwed - args.amount) < 0.01;
-
-      // Fall back to a solo expense if names couldn't be resolved or the
-      // owed amounts don't add up
-      if (unknownNames.length > 0 || !sumValid) {
-        const issues = [];
-        if (unknownNames.length > 0) {
-          const unknownList = unknownNames
-            .map((n) => n.charAt(0).toUpperCase() + n.slice(1))
-            .join(", ");
-          issues.push(`Could not resolve: ${unknownList}`);
-        }
-        if (!sumValid) issues.push("Owed amounts did not add up");
-
-        const fallbackDetails = [args.details, issues.join("; ")]
-          .filter(Boolean).join("\n\n");
-        const expenseResponse = await createSoloExpense(
-          args.title, args.amount, currencyCode, fallbackDetails, args.date);
-        Sentry.logger.info(
-          "[8] Tool: Splitwise solo expense added (invalid split fallback)", {
-            expenseId: expenseResponse.data.expenses?.[0]?.id,
-            unknownNames,
-            sumValid,
-          });
-
-        return {
-          type: "splitwiseExpense",
-          text: `"${args.title}" of ${formattedAmount} added to ` +
-            `Splitwise (solo, ${issues.join("; ").toLowerCase()}).` +
-            "\n\nOpen Splitwise to fix this expense.",
-          link: SPLITWISE_LINK,
-          confidence,
-        };
-      }
-
-      // The payer is always a participant, even if they don't owe anything
-      const payerIncluded = resolvedOwed.some((s) => s.userId === payerId);
-      const shares = resolvedOwed.map(({userId, owed}) => ({
-        userId,
-        paid: userId === payerId ? args.amount.toFixed(2) : "0.00",
-        owed: owed.toFixed(2),
-      }));
-      if (!payerIncluded) {
-        shares.push({
-          userId: payerId, paid: args.amount.toFixed(2), owed: "0.00",
-        });
-      }
-
-      const expenseResponse = await createExpenseFromShares(
-        args.title, args.amount, currencyCode, shares, args.details,
-        args.date);
-
-      Sentry.logger.info("[8] Tool: Splitwise uneven-split expense added", {
-        expense: expenseResponse.data,
-      });
-
-      const withNames = args.owedAmounts
-        .map(({name}) => name.charAt(0).toUpperCase() + name.slice(1))
-        .join(", ");
-      return {
-        type: "splitwiseExpense",
-        text: `"${args.title}" of ${formattedAmount} added to ` +
-          `Splitwise (custom split with ${withNames}).`,
-        link: SPLITWISE_LINK,
-        confidence,
-      };
-    }
-
-    // Resolve names to IDs; collect unknowns instead of throwing
-    const unknownNames = [];
-    const namedIds = names.reduce((acc, n) => {
-      const id = friends.get(n);
-      if (id) acc.push(id);
-      else unknownNames.push(n);
-      return acc;
-    }, []);
-
-    // Fall back to solo expense if any names couldn't be resolved
-    if (unknownNames.length > 0) {
-      const unknownList = unknownNames
-        .map((n) => n.charAt(0).toUpperCase() + n.slice(1))
-        .join(", ");
-      const fallbackDetails = [
-        args.details, `Could not resolve: ${unknownList}`,
-      ].filter(Boolean).join("\n\n");
-      const expenseResponse = await createSoloExpense(
-        args.title, args.amount, currencyCode, fallbackDetails, args.date);
-      Sentry.logger.info(
-        "[8] Tool: Splitwise solo expense added (unresolved names fallback)", {
-          expenseId: expenseResponse.data.expenses?.[0]?.id,
-          unknownNames,
-        });
-
-      return {
-        type: "splitwiseExpense",
-        text: `"${args.title}" of ${formattedAmount} added to ` +
-          `Splitwise (solo, could not find: ${unknownList}).` +
-          "\n\nOpen Splitwise to add the missing people to this expense.",
-        link: SPLITWISE_LINK,
-        confidence,
-      };
-    }
-
-    const allIds = [...new Set([process.env.SPLITWISE_ID_GUI, ...namedIds])];
-
-    // Others = all participants except the payer
-    const otherIds = allIds.filter((id) => id !== payerId);
-
-    const expenseResponse = await createSharedExpense(
-      args.title, args.amount, currencyCode, otherIds, payerId,
-      args.details, args.date);
-
-    Sentry.logger.info("[8] Tool: Splitwise shared expense added", {
-      expense: expenseResponse.data,
-    });
-
-    const withNames = names
-      .map((n) => n.charAt(0).toUpperCase() + n.slice(1))
-      .join(", ");
+  if (names.length > 0) {
+    const withNames = names.map(capitalize).join(", ");
     return {
       type: "splitwiseExpense",
       text: `"${args.title}" of ${formattedAmount} added to ` +
@@ -262,12 +172,6 @@ export const handler = async (args) => {
   }
 
   // Solo log, no co-payers
-  const expenseResponse = await createSoloExpense(
-    args.title, args.amount, currencyCode, args.details, args.date);
-  Sentry.logger.info("[8] Tool: Splitwise solo expense added", {
-    expense: expenseResponse.data,
-  });
-
   return {
     type: "splitwiseExpense",
     text: `"${args.title}" of ${formattedAmount} added to Splitwise.` +
