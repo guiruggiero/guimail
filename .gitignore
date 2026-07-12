@@ -6,3 +6,4 @@ prompt.md
 .env
 friends.json
 gateway.log
+.DS_Store
