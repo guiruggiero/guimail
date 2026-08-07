@@ -19,6 +19,8 @@ The `askClaudeCode` tool handler calls the Claude Code Gateway, which now lives 
 
 **Sentry**: errors logged to the `guimail` project (`GUIMAIL-*` issue IDs).
 
+**SonarQube Cloud**: project key `guiruggiero_guimail`.
+
 ## Code Style
 
 - `agent/` — max line length 80 characters (ESLint Google style config)
