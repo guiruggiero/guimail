@@ -17,6 +17,9 @@
 		"globals": "^17.8.0",
 		"wrangler": "^4.115.0"
 	},
+	"overrides": {
+		"undici": "^7.29.0"
+	},
 	"scripts": {
 		"lint": "eslint .",
     	"lint-fix": "eslint . --fix",
