@@ -26,11 +26,19 @@ axiosRetry(axiosInstance, {
 export default Sentry.withSentry(
     env => ({
         dsn: env.SENTRY_DSN,
+        dataCollection: {
+            userInfo: false,
+            cookies: false,
+            urlQueryParams: false,
+            genAI: {inputs: false, outputs: false},
+            databaseQueryData: false,
+        },
+        tracesSampleRate: 1.0,
         enableLogs: true,
     }),
     
     {
-        async email(message, env, ctx) {
+        async email(message, env) {
             Sentry.logger.info("[1] Worker: started");
 
             // List of allowed senders
@@ -46,7 +54,6 @@ export default Sentry.withSentry(
             const from = message.from;
             if (!allowedSenders.has(from.toLowerCase())) { // Case-insensitive
                 Sentry.logger.warn("Worker: sender not allowed", {from});
-                ctx.waitUntil(Sentry.flush(2000));
 
                 message.setReject("You're not a Guimail user yet! Please, reach out to Gui at https://guiruggiero.com.");
                 return;
@@ -57,7 +64,6 @@ export default Sentry.withSentry(
             const rawSize = message.rawSize;
             if (rawSize > MAX_EMAIL_SIZE) {
                 Sentry.logger.error("Worker: email too large", {rawSize});
-                ctx.waitUntil(Sentry.flush(2000));
 
                 message.setReject("This was too large for Guimail. Delete something (an attachment?) and try again, please.");
                 return;
@@ -94,7 +100,6 @@ export default Sentry.withSentry(
                 else Sentry.captureException(error, {contexts: {
                     from, subject, messageID,
                 }});
-                ctx.waitUntil(Sentry.flush(2000));
 
                 message.setReject("Something went wrong. Don't worry, Gui has been notified");
                 return;
@@ -111,7 +116,6 @@ export default Sentry.withSentry(
                 await message.reply(replyMessage);
 
                 Sentry.logger.info("[11] Worker: done");
-                ctx.waitUntil(Sentry.flush(2000));
                 return;
 
             } catch (error) {
@@ -119,7 +123,6 @@ export default Sentry.withSentry(
                     to: from,
                     reply: response.data,
                 }});
-                ctx.waitUntil(Sentry.flush(2000));
 
                 message.setReject("Something went wrong, check Sentry");
                 return;
