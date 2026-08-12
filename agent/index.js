@@ -26,6 +26,14 @@ import {
   handler as addToTasksHandler,
 } from "./tools/addToTasks.js";
 import {
+  definition as addToTrelloDef,
+  handler as addToTrelloHandler,
+} from "./tools/addToTrello.js";
+import {
+  definition as editTrelloCardDef,
+  handler as editTrelloCardHandler,
+} from "./tools/editTrelloCard.js";
+import {
   definition as askClaudeCodeDef,
   handler as askClaudeCodeHandler,
 } from "./tools/askClaudeCode.js";
@@ -58,6 +66,8 @@ const modelConfig = {
         addToBudgetDef,
         addToSplitwiseDef,
         addToTasksDef,
+        addToTrelloDef,
+        editTrelloCardDef,
         askClaudeCodeDef,
       ],
     }],
@@ -76,6 +86,8 @@ const toolHandlers = {
   [addToBudgetDef.name]: addToBudgetHandler,
   [addToSplitwiseDef.name]: addToSplitwiseHandler,
   [addToTasksDef.name]: addToTasksHandler,
+  [addToTrelloDef.name]: addToTrelloHandler,
+  [editTrelloCardDef.name]: editTrelloCardHandler,
   [askClaudeCodeDef.name]: askClaudeCodeHandler,
 };
 
@@ -143,12 +155,14 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
   }
 
   // Extract session ID embedded in the reply body
-  const sessionId = messageBody.match(/\[guimail-session:([^\]]+)\]/)?.[1];
+  const claudeCodeSessionId =
+    messageBody.match(/\[guimail-claudeCode:([^\]]+)\]/)?.[1];
+  const trelloCardId = messageBody.match(/\[guimail-trello:([^\]]+)\]/)?.[1];
 
   let toolCall;
   let handler;
   // Short-circuit to Claude Code for multi-turn sessions
-  if (sessionId) {
+  if (claudeCodeSessionId) {
     Sentry.logger.info("[6-7] Function: skipping Gemini, session continuation");
 
     // Strip quoted reply history
@@ -223,7 +237,9 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
   // Execute appropriate tool handler
   let toolResult;
   try {
-    toolResult = await handler(toolCall.args, {sessionId});
+    toolResult = await handler(
+      toolCall.args, {claudeCodeSessionId, trelloCardId},
+    );
   } catch (error) {
     Sentry.captureException(error, {contexts: {
       toolName: toolCall?.name,
@@ -270,8 +286,15 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
   htmlSections.push("<p>Thank you for using Guimail!</p>");
 
   // Embed session ID in hidden span in HTML
-  if (toolResult.sessionId) {
-    const marker = `[guimail-session:${toolResult.sessionId}]`;
+  if (toolResult.claudeCodeSessionId) {
+    const marker = `[guimail-claudeCode:${toolResult.claudeCodeSessionId}]`;
+    textSections.push(marker);
+    htmlSections.push(`<span style="display:none">${marker}</span>`);
+  }
+
+  // Embed Trello card ID in hidden span, for multi-turn edits
+  if (toolResult.trelloCardId) {
+    const marker = `[guimail-trello:${toolResult.trelloCardId}]`;
     textSections.push(marker);
     htmlSections.push(`<span style="display:none">${marker}</span>`);
   }

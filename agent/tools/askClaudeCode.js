@@ -36,7 +36,7 @@ export const definition = {
   },
 };
 
-export const handler = async (args, {sessionId} = {}) => {
+export const handler = async (args, {claudeCodeSessionId} = {}) => {
   // Validate confidence threshold
   if (args.confidence < 0.5) {
     throw new Error(`Low confidence: ${args.confidence}`);
@@ -49,20 +49,20 @@ export const handler = async (args, {sessionId} = {}) => {
     args.typedInstruction;
 
   // On resume, Claude Code already has prior context
-  const resumePrompt = sessionId ? args.typedInstruction : undefined;
+  const resumePrompt = claudeCodeSessionId ? args.typedInstruction : undefined;
 
   // Call Claude Code Gateway
   Sentry.logger.info("[8a] Tool: Claude Code Gateway called", {
-    resuming: !!sessionId,
-    sessionId,
+    resuming: !!claudeCodeSessionId,
+    claudeCodeSessionId,
   });
 
-  const {result, sessionId: newSessionId} = await runPrompt(
-    fullPrompt, sessionId, resumePrompt,
+  const {result, sessionId: newClaudeCodeSessionId} = await runPrompt(
+    fullPrompt, claudeCodeSessionId, resumePrompt,
   );
 
   Sentry.logger.info("[8d] Tool: Claude Code Gateway done", {
-    sessionId: newSessionId,
+    claudeCodeSessionId: newClaudeCodeSessionId,
   });
 
   if (!result) {
@@ -73,6 +73,6 @@ export const handler = async (args, {sessionId} = {}) => {
     type: "claudeCodeResponse",
     text: removeMarkdown(result),
     html: marked(result),
-    sessionId: newSessionId,
+    claudeCodeSessionId: newClaudeCodeSessionId,
   };
 };

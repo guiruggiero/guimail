@@ -7,11 +7,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Guimail processes emails forwarded by a user. Two components work in sequence:
 
 1. **Cloudflare Email Worker** (`email-worker/`, deployed as the `guimail` Worker — folder name and deploy name are independent) — receives emails via Cloudflare Email Routing, validates the sender, and POSTs the raw email to the Firebase Cloud Function with metadata as query params. Sends the raw RFC 2822 reply back to the sender.
-2. **Firebase Cloud Function** (`agent/`, deployed as the `guimail` function — same folder/deploy-name independence) — parses the email; if a `sessionId` is present, short-circuits directly to `askClaudeCode` (skipping Langfuse and Gemini); otherwise fetches the system prompt from Langfuse, calls Gemini with forced tool use, executes the chosen tool handler, and returns a raw RFC 2822 reply.
+2. **Firebase Cloud Function** (`agent/`, deployed as the `guimail` function — same folder/deploy-name independence) — parses the email; if a `claudeCodeSessionId` is present, short-circuits directly to `askClaudeCode` (skipping Langfuse and Gemini); otherwise fetches the system prompt from Langfuse, calls Gemini with forced tool use, executes the chosen tool handler, and returns a raw RFC 2822 reply.
 
-The `askClaudeCode` tool handler calls the Claude Code Gateway, which now lives in the separate `guiddleware` repo (`claude-code/`, deployed on code-server) since it's shared by more than just Guimail — see `agent/utils/claudeCode.js` for the client.
+The `askClaudeCode` tool handler calls the Claude Code Gateway, which now lives in the separate `guiddleware` repo (`claude-code/`, deployed on code-server) since it's shared by more than just Guimail — see `agent/utils/claudeCode.js` for the client. `addToTrello`/`editTrelloCard` call `guiddleware`'s `tools/` Trello routes the same way, via `agent/utils/guiddleware.js`.
 
-**Session continuity**: the function embeds a `[guimail-session:<id>]` marker in the reply body (Gmail strips custom headers on reply, so headers can't be used); on the next turn the function extracts it from the quoted body to short-circuit directly to `askClaudeCode`.
+**Session continuity**: the function embeds a `[guimail-claudeCode:<id>]` marker in the reply body (Gmail strips custom headers on reply, so headers can't be used); on the next turn the function extracts it from the quoted body to short-circuit directly to `askClaudeCode`. `editTrelloCard` uses the same body-marker trick for its own `[guimail-trello:<id>]`, but only to pass along which card a reply refers to — it doesn't skip Gemini/Langfuse the way the Claude Code marker does.
 
 **Reply threading**: replies set `In-Reply-To` and `References` headers using the original `messageID` and `references` query params.
 

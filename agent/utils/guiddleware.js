@@ -42,3 +42,23 @@ export const updateSheet = async (payload) => {
   const res = await guiddlewareClient.post("/sheets/values", payload);
   return res.data;
 };
+
+// Creates a Trello card
+export const createTrelloCard = async (payload) => {
+  const res = await guiddlewareClient.post("/trello/cards", payload);
+  return res.data;
+};
+
+// Full-text searches Trello card titles
+export const searchTrelloCards = async (query) => {
+  const res = await guiddlewareClient.get(
+    "/trello/cards/search", {params: {q: query}},
+  );
+  return res.data.cards;
+};
+
+// Updates a Trello card's name, description, or list
+export const updateTrelloCard = async (id, payload) => {
+  const res = await guiddlewareClient.patch(`/trello/cards/${id}`, payload);
+  return res.data;
+};
