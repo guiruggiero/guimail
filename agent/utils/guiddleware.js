@@ -4,7 +4,7 @@ import {createRetryClient} from "./axiosClient.js";
 // Axios instance for Guiddleware
 const guiddlewareClient = createRetryClient({
   baseURL: process.env.GUIDDLEWARE_URL,
-  timeout: 10000, // 10s
+  timeout: 30000, // 30s, to absorb Guiddleware cold starts + API retries
   headers: {
     "Authorization": `Bearer ${process.env.GUIDDLEWARE_SECRET_GUIMAIL}`,
     "Content-Type": "application/json",
