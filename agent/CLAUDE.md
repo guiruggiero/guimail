@@ -40,7 +40,7 @@ Each in `agent/utils/`.
 - `guiddleware.js` — axios client for the shared Guiddleware service: `createExpense(payload)` (Splitwise), `createCalendarEvent(payload)`, `getFlightAwareUrl(flightNumber)`, `createTask(payload)`, `updateSheet(payload)`, `createTrelloCard(payload)`, `searchTrelloCards(query)`, `updateTrelloCard(id, payload)`
 - `langfuse.js` — eagerly initialized Langfuse client, `getPrompt(name)`
 
-Splitwise, Google Calendar, FlightAware, and Google Sheets clients used to live here too — they all moved to the shared `guiddleware` repo since GuiDo and Guiwise need some of the same integrations (and Sheets, while Guimail-only today, is just as generic an integration as the rest); see `guiddleware.js` above and `guiddleware`'s own `tools/CLAUDE.md`. Guimail no longer holds any Google service-account credentials at all — `googleAuth.js`/`service-account-key.json` were deleted once Sheets moved, since nothing local needed them anymore.
+Splitwise, Google Calendar, FlightAware, and Google Sheets clients used to live here too — they all moved to the shared `guiddleware` repo since GuiDo needs some of the same integrations (and Sheets, while Guimail-only today, is just as generic an integration as the rest); see `guiddleware.js` above and `guiddleware`'s own `tools/CLAUDE.md`. Guimail no longer holds any Google service-account credentials at all — `googleAuth.js`/`service-account-key.json` were deleted once Sheets moved, since nothing local needed them anymore.
 
 ## Required env vars
 

@@ -44,7 +44,7 @@ There are two main components in this repo, plus a shared service in a separate 
 - Processes email content using Gemini API with tool calling
 - Automatically chooses tool for calendar event, summarization, budget tracking, expense creation, task creation, or Claude Code task execution
 - Extracts structured data with validation and confidence scoring
-- Delegates Calendar, Splitwise, FlightAware, Google Tasks, and Google Sheets actions to [Guiddleware](https://github.com/guiruggiero/guiddleware), a shared service also used by GuiDo and Guiwise
+- Delegates Calendar, Splitwise, FlightAware, Google Tasks, and Google Sheets actions to [Guiddleware](https://github.com/guiruggiero/guiddleware), a shared service also used by GuiDo
 - Executes Claude Code tasks via a self-hosted gateway server (also in the Guiddleware repo, deployed separately)
 - Composes and sends reply emails with proper threading
 
