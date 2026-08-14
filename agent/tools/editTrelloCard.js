@@ -67,7 +67,8 @@ export const handler = async (args, {trelloCardId} = {}) => {
 
     const matches = await searchTrelloCards(args.query);
 
-    // Zero or multiple matches: surface candidates
+    // Zero or multiple matches: surface candidates to the human
+    // Idea: could instead let Gemini pick via compositional function calling
     if (matches.length === 0) {
       Sentry.logger.info("[8] Tool: no Trello card matched", {
         query: args.query,
