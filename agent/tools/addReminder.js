@@ -4,7 +4,7 @@ import {Type} from "@google/genai";
 import {createTask} from "../utils/guiddleware.js";
 
 export const definition = {
-  name: "addToTasks",
+  name: "addReminder",
   description: "Adds a to-do item to Google Tasks",
   parameters: {
     type: Type.OBJECT,

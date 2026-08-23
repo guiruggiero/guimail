@@ -7,7 +7,7 @@ export const definition = {
   name: "addToTrello",
   description: "Creates a Trello card for an actionable to-do. Use only" +
     " when the email explicitly mentions a 'card' or 'Trello' — for" +
-    " open-ended to-dos without that language, use addToTasks instead.",
+    " open-ended to-dos without that language, use addReminder instead.",
   parameters: {
     type: Type.OBJECT,
     properties: {

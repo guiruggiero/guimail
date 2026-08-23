@@ -22,9 +22,9 @@ import {
   handler as addToSplitwiseHandler,
 } from "./tools/addToSplitwise.js";
 import {
-  definition as addToTasksDef,
-  handler as addToTasksHandler,
-} from "./tools/addToTasks.js";
+  definition as addReminderDef,
+  handler as addReminderHandler,
+} from "./tools/addReminder.js";
 import {
   definition as addToTrelloDef,
   handler as addToTrelloHandler,
@@ -65,7 +65,7 @@ const modelConfig = {
         summarizeEmailDef,
         addToBudgetDef,
         addToSplitwiseDef,
-        addToTasksDef,
+        addReminderDef,
         addToTrelloDef,
         editTrelloCardDef,
         askClaudeCodeDef,
@@ -85,7 +85,7 @@ const toolHandlers = {
   [summarizeEmailDef.name]: summarizeEmailHandler,
   [addToBudgetDef.name]: addToBudgetHandler,
   [addToSplitwiseDef.name]: addToSplitwiseHandler,
-  [addToTasksDef.name]: addToTasksHandler,
+  [addReminderDef.name]: addReminderHandler,
   [addToTrelloDef.name]: addToTrelloHandler,
   [editTrelloCardDef.name]: editTrelloCardHandler,
   [askClaudeCodeDef.name]: askClaudeCodeHandler,
