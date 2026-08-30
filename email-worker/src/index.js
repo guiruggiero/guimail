@@ -13,6 +13,7 @@ let allowedSenders;
 const axiosInstance = axios.create({
     baseURL: cloudFunctionURL,
     timeout: 430000, // slightly over Firebase's 420s max
+    fetchOptions: {cache: "no-store"}, // Worker doesn't support axios's default cache mode
 });
 
 // Retry configuration
