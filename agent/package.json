@@ -3,7 +3,7 @@
   "description": "Cloud Functions for Firebase",
   "type": "module",
   "engines": {
-    "node": "22"
+    "node": "24"
   },
   "private": true,
   "main": "index.js",
