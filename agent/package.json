@@ -16,7 +16,7 @@
     "firebase-functions": "^7.3.2",
     "marked": "^18.0.6",
     "nodemailer": "^9.0.3",
-    "postal-mime": "^2.7.1",
+    "postal-mime": "^3.0.0",
     "remove-markdown": "^0.6.3"
   },
   "devDependencies": {
