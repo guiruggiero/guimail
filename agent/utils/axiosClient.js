@@ -16,6 +16,7 @@ export const createRetryClient = (
   axiosRetry(client, {
     retries,
     retryDelay: axiosRetry.exponentialDelay,
+    shouldResetTimeout: true, // Fresh timeout window per retry, not shared
     retryCondition,
   });
   return client;

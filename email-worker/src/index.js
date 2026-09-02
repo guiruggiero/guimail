@@ -20,6 +20,7 @@ const axiosInstance = axios.create({
 axiosRetry(axiosInstance, {
     retries: 1, // One retry for transient failures
     retryDelay: axiosRetry.exponentialDelay, // 1s between retries
+    shouldResetTimeout: true, // Fresh timeout window per retry, not shared
     // Only retry on network or 5xx errors
     retryCondition: (error) => axiosRetry.isNetworkOrIdempotentRequestError(error) || (error.response && error.response.status > 500),
 });
