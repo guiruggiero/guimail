@@ -40,14 +40,17 @@ const pull = async () => {
 };
 
 // Push: upload prompt.md to Langfuse as a new version (not production)
-const push = async () => {
+const push = async (commitMessage) => {
   const content = readFileSync(PROMPT_FILE, "utf-8");
-  const version = await createPromptVersion("Guimail", content);
+  const version = await createPromptVersion("Guimail", content, commitMessage);
   console.log(`Pushed prompt.md as version ${version} (not production)`);
 };
 
 // Run based on command-line argument
 const command = process.argv[2];
 if (command === "pull") await pull();
-else if (command === "push") await push();
-else console.error("Usage: node scripts/promptSync.js pull|push");
+else if (command === "push") await push(process.argv[3]);
+else {
+  console.error(
+    "Usage: node scripts/promptSync.js pull|push [commitMessage]");
+}

@@ -15,12 +15,13 @@ export const getPrompt = async (name) => {
 };
 
 // Create a new prompt version without setting it as production
-export const createPromptVersion = async (name, content) => {
+export const createPromptVersion = async (name, content, commitMessage) => {
   const res = await langfuse.prompt.create({
     name,
     type: "text",
     prompt: content,
     labels: [], // omit "production"
+    commitMessage,
   });
   return res.version;
 };

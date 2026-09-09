@@ -9,12 +9,12 @@ const BUDGET_LINK = {
   label: "View budget spreadsheet",
 };
 
-// Mapping of issuers and row numbers
+// Mapping of issuers, last 4, and row numbers
 const issuerToRow = {
-  "Chase": "2",
-  "Capital One": "3",
-  "Amex": "4",
-  "Discover": "5",
+  "Chase": {"4003": "2", "4179": "6"},
+  "Capital One": {"default": "3"},
+  "Amex": {"default": "4"},
+  "Discover": {"default": "5"},
 };
 
 export const definition = {
@@ -28,6 +28,12 @@ export const definition = {
         type: Type.STRING,
         enum: ["Chase", "Capital One", "Amex", "Discover"],
         description: "Credit card issuer name",
+      },
+      last4: {
+        type: Type.STRING,
+        description: "Last 4 digits of the card number, only needed to" +
+          " distinguish between multiple cards from the same issuer" +
+          " (e.g., Chase)",
       },
       balance: {
         type: Type.NUMBER,
@@ -55,24 +61,34 @@ export const handler = async (args) => {
     throw new Error(`Low confidence: ${args.confidence}`);
   }
 
+  // Resolve the spreadsheet row for this issuer/card
+  const spreadsheetRow = issuerToRow[args.issuer][args.last4 || "default"];
+  if (!spreadsheetRow) {
+    throw new Error(`Unknown budget row for issuer ${args.issuer}` +
+      (args.last4 ? ` and last4 ${args.last4}` : ""));
+  }
+
   // Update multiple cells at once, via Guiddleware
   await updateSheet({
     spreadsheetId: process.env.GOOGLE_SHEET_ID,
     data: [
       {
-        range: `Y${issuerToRow[args.issuer]}`,
+        range: `Y${spreadsheetRow}`,
         values: [[args.balance]], // Must be in a 2D array
       },
       {
-        range: `Z${issuerToRow[args.issuer]}`,
+        range: `Z${spreadsheetRow}`,
         values: [[
-          new Date().toLocaleString("en-US", {timeZone: "CET"}),
+          new Date().toLocaleString("en-US", {
+            timeZone: "America/Los_Angeles",
+          }),
         ]],
       },
     ],
   });
   Sentry.logger.info("[8a] Tool: Google Sheet updated", {
     issuer: args.issuer,
+    last4: args.last4,
     balance: args.balance,
     currency: args.currency,
   });
