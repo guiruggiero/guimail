@@ -103,22 +103,22 @@ export const handler = async (args) => {
   let responseText = `${args.issuer} balance of ${formattedBalance} ` +
     `added to budget spreadsheet.`;
 
-  // Add to Splitwise
+  // Add to Settle Up
   if (args.issuer === "Capital One") {
     const {expense} = await createExpense({
       description: "Capital One",
       amount: args.balance,
       currency: args.currency,
       paidBy: "gui",
-      splitWith: ["georgia"],
+      split: "equal",
       source: "Guimail",
     });
 
-    Sentry.logger.info("[8b] Tool: Splitwise expense added", {
+    Sentry.logger.info("[8b] Tool: Settle Up expense added", {
       expenseId: expense?.id,
     });
 
-    responseText += "\n\nExpense also added to Splitwise.";
+    responseText += "\n\nExpense also added to Settle Up.";
   }
 
   return {

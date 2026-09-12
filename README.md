@@ -12,7 +12,7 @@ An intelligent multi-purpose email processing AI agent. Forward any email to Gui
 - 📅 **Extract calendar events** - Automatically add meetings, appointments, or any event (in-person or virtual) directly to Google Calendar
 - 📝 **Summarize content** - Receive concise summaries of long emails, newsletters, and threads
 - 💸 **Track expenses** - Add credit card statement balances to a budget spreadsheet
-- ➗ **Share expenses** - Add expenses to Splitwise
+- ➗ **Share expenses** - Add expenses to Settle Up
 - 🤖 **Run coding tasks** - Forward emails with development requests to Claude Code running on your dev server
 
 ### ✨ Features
@@ -22,7 +22,7 @@ An intelligent multi-purpose email processing AI agent. Forward any email to Gui
 - **FlightAware AeroAPI integration** for IATA->ICAO code mapping and flight tracking links, via the shared Guiddleware service
 - **Email summarization** for quick insights from lengthy content
 - **Budget tracking** with Google Sheets, via the shared Guiddleware service
-- **Expense splitting** with Splitwise, supporting uneven splits, any currency, and backdating, via the shared Guiddleware service
+- **Expense splitting** with Settle Up, supporting uneven splits, any currency, and backdating, scoped to Gui and Georgia, via the shared Guiddleware service
 - **Claude Code integration** for running development tasks against your own dev server via a self-hosted gateway, with **multi-turn session support** for follow-up requests
 - **Helpful responses** with proper **email threading**
 - **Multi-tool AI agent** using Gemini Flash model through the Gemini API with extensible architecture for easy addition of new features
@@ -44,7 +44,7 @@ There are two main components in this repo, plus a shared service in a separate 
 - Processes email content using Gemini API with tool calling
 - Automatically chooses tool for calendar event, summarization, budget tracking, expense creation, task creation, or Claude Code task execution
 - Extracts structured data with validation and confidence scoring
-- Delegates Calendar, Splitwise, FlightAware, Google Tasks, and Google Sheets actions to [Guiddleware](https://github.com/guiruggiero/guiddleware), a shared service also used by GuiDo
+- Delegates Calendar, Settle Up, FlightAware, Google Tasks, and Google Sheets actions to [Guiddleware](https://github.com/guiruggiero/guiddleware), a shared service also used by GuiDo
 - Executes Claude Code tasks via a self-hosted gateway server (also in the Guiddleware repo, deployed separately)
 - Composes and sends reply emails with proper threading
 
