@@ -44,7 +44,7 @@ Splitwise, Google Calendar, FlightAware, and Google Sheets clients used to live 
 
 ## Required env vars
 
-`GEMINI_API_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_PUBLIC_KEY`, `SENTRY_DSN`, `WORKER_SECRET`, `GOOGLE_SHEET_ID`, `EMAIL_GUIMAIL`, `GUIDDLEWARE_URL`, `GUIDDLEWARE_SECRET_GUIMAIL`, `CLAUDE_CODE_GATEWAY_URL`, `CLAUDE_CODE_GATEWAY_SECRET_GUIMAIL`
+`GEMINI_API_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_PUBLIC_KEY`, `SENTRY_DSN`, `WORKER_SECRET`, `GOOGLE_SHEET_ID`, `EMAIL_GUIMAIL`, `GUIDDLEWARE_URL`, `GUIDDLEWARE_SECRET_GUIMAIL`, `CLAUDE_CODE_GATEWAY_URL`, `CLAUDE_CODE_GATEWAY_PATH`, `CLAUDE_CODE_GATEWAY_SECRET_GUIMAIL`
 
 `GOOGLE_SHEET_ID` is Guimail's own config (which spreadsheet its budget tool writes to), passed to Guiddleware per-request — Guiddleware has no hardcoded spreadsheet, unlike Splitwise/Calendar where the IDs are genuinely shared, global config.
 
