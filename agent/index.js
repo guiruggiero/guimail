@@ -202,8 +202,8 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
       return;
     }
 
-    // Detect the stock loan case for dedicated extraction tool
-    const subjectStr = originalSubject ?? "";
+    // Detect the stock loan case; body.subject decodes MIME encoding
+    const subjectStr = body.subject ?? originalSubject ?? "";
     const isStockLoanEmail =
       /btg pactual/i.test(subjectStr) && /aluguel/i.test(subjectStr);
     const stockLoanAttachments = isStockLoanEmail ?
