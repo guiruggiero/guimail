@@ -37,6 +37,10 @@ import {
   definition as askClaudeCodeDef,
   handler as askClaudeCodeHandler,
 } from "./tools/askClaudeCode.js";
+import {
+  definition as addStockLoanToSheetDef,
+  handler as addStockLoanToSheetHandler,
+} from "./tools/addStockLoanToSheet.js";
 
 // Initializations
 Sentry.init({
@@ -89,6 +93,7 @@ const toolHandlers = {
   [addToTrelloDef.name]: addToTrelloHandler,
   [editTrelloCardDef.name]: editTrelloCardHandler,
   [askClaudeCodeDef.name]: askClaudeCodeHandler,
+  [addStockLoanToSheetDef.name]: addStockLoanToSheetHandler,
 };
 
 // Firebase function configuration
@@ -197,17 +202,49 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
       return;
     }
 
+    // Detect the stock loan case for dedicated extraction tool
+    const subjectStr = originalSubject ?? "";
+    const isStockLoanEmail =
+      /btg pactual/i.test(subjectStr) && /aluguel/i.test(subjectStr);
+    const stockLoanAttachments = isStockLoanEmail ?
+      (body.attachments ?? []).filter((attachment) =>
+        attachment.mimeType === "application/pdf" &&
+        /stockloan/i.test(attachment.filename ?? "")) :
+      [];
+
     // Call Gemini
     let result;
     try {
-      result = await ai.models.generateContent({
-        ...modelConfig,
-        config: {
-          ...modelConfig.config,
-          systemInstruction: instructions,
-        },
-        contents: messageBody,
-      });
+      if (stockLoanAttachments.length > 0) {
+        result = await ai.models.generateContent({
+          model: modelConfig.model,
+          config: {
+            ...modelConfig.config,
+            systemInstruction: instructions,
+            tools: [{functionDeclarations: [addStockLoanToSheetDef]}],
+            toolConfig: {
+              functionCallingConfig: {
+                mode: FunctionCallingConfigMode.ANY,
+              },
+            },
+          },
+          contents: stockLoanAttachments.map((attachment) => ({
+            inlineData: {
+              mimeType: attachment.mimeType,
+              data: Buffer.from(attachment.content).toString("base64"),
+            },
+          })),
+        });
+      } else {
+        result = await ai.models.generateContent({
+          ...modelConfig,
+          config: {
+            ...modelConfig.config,
+            systemInstruction: instructions,
+          },
+          contents: messageBody,
+        });
+      }
 
       // Validate tool call
       if (!result?.functionCalls || result.functionCalls.length === 0) {

@@ -43,6 +43,12 @@ export const updateSheet = async (payload) => {
   return res.data;
 };
 
+// Appends new rows to a Google Sheet
+export const appendSheetRows = async (payload) => {
+  const res = await guiddlewareClient.post("/sheets/append", payload);
+  return res.data;
+};
+
 // Creates a Trello card
 export const createTrelloCard = async (payload) => {
   const res = await guiddlewareClient.post("/trello/cards", payload);
