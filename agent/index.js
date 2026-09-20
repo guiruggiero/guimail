@@ -4,7 +4,7 @@ import {GoogleGenAI, FunctionCallingConfigMode} from "@google/genai";
 import {getPrompt} from "./utils/langfuse.js";
 import {onRequest} from "firebase-functions/v2/https";
 import PostalMime from "postal-mime";
-import MailComposer from "nodemailer/lib/mail-composer/index.js";
+import MailComposer from "nodemailer/lib/mail-composer";
 import {
   definition as addToCalendarDef,
   handler as addToCalendarHandler,
