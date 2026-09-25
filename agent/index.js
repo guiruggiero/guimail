@@ -208,9 +208,18 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
       /btg pactual/i.test(subjectStr) && /aluguel/i.test(subjectStr);
     const stockLoanAttachments = isStockLoanEmail ?
       (body.attachments ?? []).filter((attachment) =>
-        attachment.mimeType === "application/pdf" &&
-        /stockloan/i.test(attachment.filename ?? "")) :
+        /stockloan.*\.pdf$/i.test(attachment.filename ?? "")) :
       [];
+
+    // Warn if the subject matched but no attachment did
+    if (isStockLoanEmail && stockLoanAttachments.length === 0) {
+      Sentry.logger.warn("[6a] Function: stock loan subject, no PDF matched", {
+        attachments: (body.attachments ?? []).map((attachment) => ({
+          filename: attachment.filename,
+          mimeType: attachment.mimeType,
+        })),
+      });
+    }
 
     // Call Gemini
     let result;
@@ -230,7 +239,7 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
           },
           contents: stockLoanAttachments.map((attachment) => ({
             inlineData: {
-              mimeType: attachment.mimeType,
+              mimeType: "application/pdf",
               data: Buffer.from(attachment.content).toString("base64"),
             },
           })),
