@@ -6,7 +6,7 @@
 	"type": "module",
 	"main": "src/index.js",
 	"dependencies": {
-		"@sentry/cloudflare": "^10.65.0",
+		"@sentry/cloudflare": "^11.0.0",
 		"axios": "^1.18.0",
 		"axios-retry": "^4.5.0"
 	},
@@ -15,7 +15,7 @@
 		"@stylistic/eslint-plugin": "^5.9.0",
 		"eslint": "^10.7.0",
 		"globals": "^17.8.0",
-		"wrangler": "^4.115.0"
+		"wrangler": "^4.142.0"
 	},
 	"overrides": {
 		"undici": "^7.29.0"
