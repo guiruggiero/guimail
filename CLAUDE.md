@@ -11,7 +11,7 @@ Guimail processes emails forwarded by a user. Two components work in sequence, e
 
 See `agent/CLAUDE.md` and `email-worker/CLAUDE.md` for each component's pipeline and env vars.
 
-The `askClaudeCode` tool handler calls the Claude Code Gateway, which now lives in the separate `guiddleware` repo (`claude-code/`, deployed on code-server) since it's shared by more than just Guimail — see `agent/utils/claudeCode.js` for the client. `addToTrello`/`editTrelloCard` call `guiddleware`'s `tools/` Trello routes the same way, via `agent/utils/guiddleware.js`.
+The `askClaudeCode` handler calls the Claude Code Gateway (`guiddleware/claude-code/`, deployed on code-server) via `agent/utils/claudeCode.js`. `addToTrello`/`editTrelloCard` call `guiddleware`'s `tools/` Trello routes via `agent/utils/guiddleware.js`.
 
 **Session continuity**: the function embeds a `[guimail-claudeCode:<id>]` marker in the reply body (Gmail strips custom headers on reply, so headers can't be used); on the next turn the function extracts it from the quoted body to short-circuit directly to `askClaudeCode`. `editTrelloCard` uses the same body-marker trick for its own `[guimail-trello:<id>]`, but only to pass along which card a reply refers to — it doesn't skip Gemini/Langfuse the way the Claude Code marker does.
 
@@ -22,11 +22,6 @@ The `askClaudeCode` tool handler calls the Claude Code Gateway, which now lives 
 **Sentry**: errors logged to the `guimail` project (`GUIMAIL-*` issue IDs).
 
 **SonarQube Cloud**: project key `guiruggiero_guimail`.
-
-## Code Style
-
-- `agent/` — max line length 80 characters (ESLint Google style config)
-- `email-worker/` — 4-space indent (`@stylistic/eslint-plugin`); shared ESLint rules live in `eslint.config.shared.js` at the repo root
 
 ## Other
 

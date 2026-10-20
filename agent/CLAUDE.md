@@ -52,7 +52,7 @@ Each in `agent/utils/`.
 - `guiddleware.js` — axios client for the shared Guiddleware service: `createExpense(payload)` (Splitwise), `createCalendarEvent(payload)`, `getFlightAwareUrl(flightNumber)`, `createTask(payload)`, `updateSheet(payload)`, `appendSheetRows(payload)`, `createTrelloCard(payload)`, `searchTrelloCards(query)`, `updateTrelloCard(id, payload)`
 - `langfuse.js` — eagerly initialized Langfuse client, `getPrompt(name)`
 
-Splitwise, Google Calendar, FlightAware, and Google Sheets clients used to live here too — they all moved to the shared `guiddleware` repo since GuiDo needs some of the same integrations (and Sheets, while Guimail-only today, is just as generic an integration as the rest); see `guiddleware.js` above and `guiddleware`'s own `tools/CLAUDE.md`. Guimail no longer holds any Google service-account credentials at all — `googleAuth.js`/`service-account-key.json` were deleted once Sheets moved, since nothing local needed them anymore.
+Integration clients (Splitwise, Calendar, FlightAware, Sheets, Trello) live in `guiddleware`'s `tools/`, called via `guiddleware.js`. Guimail holds no Google service-account credentials.
 
 ## Required env vars
 
@@ -64,10 +64,8 @@ All kept in `agent/.env` (gitignored), picked up automatically by Firebase CLI o
 
 ## Prompt management
 
-`agent/prompt.md` is the local copy of the system prompt (gitignored). The live prompt is on Langfuse; `prompt.md` exists so Claude Code always has the full prompt in context. Use `npm run prompt-pull` / `npm run prompt-push` to sync; `prompt-push` accepts an optional trailing commit message (e.g. `npm run prompt-push -- "message"`), stored as the Langfuse prompt version's `commitMessage`. Always apply changes to the system prompt, let the user know, and offer to push to Langfuse; but never mention it in the commit message.
-
-**A push is not a deploy.** `createPromptVersion` passes `labels: []`, deliberately omitting `"production"`, so the live prompt doesn't change until the version is promoted in the Langfuse UI. And because `prompt-pull` fetches the production-labelled version, pulling before promoting overwrites `prompt.md` with the old live prompt — losing the local edits you just pushed.
+`agent/prompt.md` is the local copy of the system prompt. `prompt-pull` / `prompt-push` read `.env` (gitignored).
 
 ## Local scripts
 
-`agent/scripts/` — not deployed with the function. `promptSync.js` (Langfuse pull/push) only; the Splitwise friend-registry sync (`friends.js`/`friends.json`) moved to `guiddleware`'s `tools/scripts/`, since the friend registry lives there now.
+`agent/scripts/` isn't deployed with the function. It holds `promptSync.js` (Langfuse pull/push) only.
