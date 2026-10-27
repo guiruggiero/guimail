@@ -21,8 +21,8 @@ axiosRetry(axiosInstance, {
     retries: 1, // One retry for transient failures
     retryDelay: axiosRetry.exponentialDelay, // 1s between retries
     shouldResetTimeout: true, // Fresh timeout window per retry, not shared
-    // Only retry on network or 5xx errors
-    retryCondition: (error) => axiosRetry.isNetworkOrIdempotentRequestError(error) || (error.response && error.response.status > 500),
+    // Only retry on network or 5xx errors, except 524 (Cloudflare gave up waiting, but the function is still running and a retry would duplicate its work)
+    retryCondition: (error) => axiosRetry.isNetworkOrIdempotentRequestError(error) || (error.response && error.response.status > 500 && error.response.status !== 524),
 });
 
 export default Sentry.withSentry(
@@ -93,10 +93,18 @@ export default Sentry.withSentry(
 
             } catch (error) {
                 // Guimail responded with status 4xx or 5xx
-                if (error.response) Sentry.logger.error("Worker: Guimail failed", {
-                    status: error.response.status,
-                    data: error.response?.data,
-                });
+                if (error.response) {
+                    Sentry.logger.error("Worker: Guimail failed", {
+                        status: error.response.status,
+                        data: error.response?.data,
+                    });
+
+                    // Also an issue, so these failures don't pass unnoticed in Sentry
+                    Sentry.captureException(error, {contexts: {
+                        from, subject, messageID,
+                        response: {status: error.response.status, data: error.response?.data},
+                    }});
+                }
 
                 // Other errors
                 else Sentry.captureException(error, {contexts: {
