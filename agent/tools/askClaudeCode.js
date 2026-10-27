@@ -19,13 +19,6 @@ export const definition = {
           " beginning of the email up to (not including) the forwarded" +
           " message separator",
       },
-      forwardedContent: {
-        type: Type.STRING,
-        description: "The forwarded email body with all HTML tags, inline" +
-          " styles, and image references stripped, but overall structure" +
-          " and content otherwise unchanged. Omit if there is no forwarded" +
-          " message.",
-      },
       confidence: {
         type: Type.NUMBER,
         description: "Confidence score between 0 and 1 indicating" +
@@ -36,16 +29,18 @@ export const definition = {
   },
 };
 
-export const handler = async (args, {claudeCodeSessionId} = {}) => {
+export const handler = async (
+  args, {claudeCodeSessionId, forwardedContent} = {},
+) => {
   // Validate confidence threshold
   if (args.confidence < 0.5) {
     throw new Error(`Low confidence: ${args.confidence}`);
   }
 
   // Assemble prompt for Claude Code, always everything for fresh sessions
-  const fullPrompt = args.forwardedContent ?
+  const fullPrompt = forwardedContent ?
     `${args.typedInstruction}\n\nContext (forwarded email):\n\n` +
-      args.forwardedContent :
+      forwardedContent :
     args.typedInstruction;
 
   // On resume, Claude Code already has prior context

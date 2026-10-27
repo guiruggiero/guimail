@@ -59,6 +59,7 @@ There are two main components in this repo, plus a shared service in a separate 
 - `marked` and `remove-markdown` - markdown rendering and stripping for Claude Code replies
 - `nodemailer` - email composition
 - `postal-mime` - email parsing and content extraction
+- `sanitize-html` - HTML to plain text for forwarded content
 - `wrangler` and `firebase-tools` - deployment and management
 
 ---

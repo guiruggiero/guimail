@@ -4,6 +4,7 @@ import {GoogleGenAI, FunctionCallingConfigMode} from "@google/genai";
 import {getPrompt} from "./utils/langfuse.js";
 import {onRequest} from "firebase-functions/v2/https";
 import PostalMime from "postal-mime";
+import {htmlToText} from "./utils/htmlToText.js";
 import MailComposer from "nodemailer/lib/mail-composer";
 import {
   definition as addToCalendarDef,
@@ -56,12 +57,16 @@ Sentry.init({
 });
 const ai = new GoogleGenAI({apiKey: process.env.GEMINI_API_KEY});
 
+// Separators in the email body: quoted reply history and forwarded message
+const gmailReply = /^On .+ wrote:$/im; // Gmail reply
+const gmailForward = /^-+\s*forwarded message\s*-+/im; // Gmail forward
+
 // Model configuration
 const modelConfig = {
   model: "gemini-flash-latest",
   config: {
     thinkingConfig: {
-      thinkingLevel: "high",
+      thinkingLevel: "medium",
     },
     tools: [{
       functionDeclarations: [
@@ -164,6 +169,12 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
     messageBody.match(/\[guimail-claudeCode:([^\]]+)\]/)?.[1];
   const trelloCardId = messageBody.match(/\[guimail-trello:([^\]]+)\]/)?.[1];
 
+  // Forwarded email taken from the parsed body
+  const plainBody = body.text || htmlToText(body.html);
+  const forwardIndex = plainBody.search(gmailForward);
+  const forwardedContent = forwardIndex >= 0 ?
+    plainBody.slice(forwardIndex).trim() : undefined;
+
   let toolCall;
   let handler;
   // Short-circuit to Claude Code for multi-turn sessions
@@ -171,8 +182,6 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
     Sentry.logger.info("[6-7] Function: skipping Gemini, session continuation");
 
     // Strip quoted reply history
-    const gmailReply = /^On .+ wrote:$/im; // Gmail reply
-    const gmailForward = /^-+\s*forwarded message\s*-+/im; // Gmail forward
     const separatorIndex = messageBody.search(
       new RegExp(`${gmailReply.source}|${gmailForward.source}`, "im"),
     );
@@ -284,7 +293,7 @@ export const guimail = onRequest(functionConfig, async (request, response) => {
   let toolResult;
   try {
     toolResult = await handler(
-      toolCall.args, {claudeCodeSessionId, trelloCardId},
+      toolCall.args, {claudeCodeSessionId, trelloCardId, forwardedContent},
     );
   } catch (error) {
     Sentry.captureException(error, {contexts: {
