@@ -75,10 +75,15 @@ export const handler = async (args) => {
     count: args.transactions.length,
   });
 
+  // Unique tickers, in order of first appearance, for the reply
+  const tickers = [...new Set(
+    args.transactions.map((transaction) => transaction.ticker),
+  )].join(", ");
+
   return {
     type: "stockLoanUpdate",
     text: `${args.transactions.length} stock loan transaction(s) added` +
-      ` to the spreadsheet.`,
+      ` to the spreadsheet (${tickers}).`,
     link: STOCK_LOAN_LINK,
     confidence: Math.round(args.confidence * 100),
   };
