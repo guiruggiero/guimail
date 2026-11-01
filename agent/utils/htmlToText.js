@@ -24,7 +24,8 @@ export const htmlToText = (html) => {
     .replace(/&quot;/gi, "\"")
     .replace(/&#39;/gi, "'")
     .replace(/&amp;/gi, "&") // Last, to avoid double-decoding
-    .replace(/[ \t]+\n/g, "\n")
+    // Strip trailing whitespace per line
+    .split("\n").map((line) => line.trimEnd()).join("\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 };
