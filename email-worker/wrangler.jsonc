@@ -2,13 +2,9 @@
 	"$schema": "./node_modules/wrangler/config-schema.json",
 	"name": "guimail",
 	"main": "src/index.js",
+	"compatibility_date": "2026-11-12",
+	"compatibility_flags": ["cache_option_enabled"],
+	"observability": {"enabled": true},
 	"workers_dev": false,
-	"preview_urls": false,
-	"observability": {
-		"enabled": true
-	},
-	"compatibility_date": "2026-08-30",
-	"compatibility_flags": [
-		"cache_option_enabled"
-	]
+	"preview_urls": false
 }

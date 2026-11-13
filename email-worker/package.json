@@ -15,15 +15,14 @@
 		"@stylistic/eslint-plugin": "^5.9.0",
 		"eslint": "^10.7.0",
 		"globals": "^17.8.0",
-		"wrangler": "^4.142.0"
+		"wrangler": "^4.161.0"
 	},
 	"overrides": {
 		"minimatch": ">=11.0.1"
 	},
 	"scripts": {
 		"lint": "eslint .",
-    	"lint-fix": "eslint . --fix",
-		"update": "npm i -D wrangler@latest",
+		"lint-fix": "eslint . --fix",
 		"whoami": "npx wrangler whoami",
 		"secret": "npx wrangler secret put/delete <SECRET_NAME>",
 		"deploy": "npx wrangler deploy"
