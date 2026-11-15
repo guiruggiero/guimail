@@ -63,7 +63,7 @@ const gmailForward = /^-+\s*forwarded message\s*-+/im; // Gmail forward
 
 // Model configuration
 const modelConfig = {
-  model: "gemini-flash-latest",
+  model: "gemini-3.8-flash",
   config: {
     thinkingConfig: {
       thinkingLevel: "medium",
